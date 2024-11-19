@@ -6,7 +6,7 @@ app.geometry("600x400")
 app.title("Ransomware Defense")
 
 # Add a label
-label = ctk.CTkLabel(app, text="Welcome to Ransomware Defense App", font=("Arial", 20))
+label = ctk.CTkLabel(app, text="Welcome to Guardian", font=("Arial", 20))
 label.pack(pady=20)
 
 
