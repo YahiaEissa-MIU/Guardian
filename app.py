@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from tkinter import messagebox  # For feedback messages
 
 # Initialize the app
 app = ctk.CTk()
@@ -7,7 +8,6 @@ app.title("Guardian")
 
 # Sidebar visibility flag
 sidebar_visible = True
-
 
 # Toggle sidebar visibility
 def toggle_sidebar():
@@ -19,7 +19,6 @@ def toggle_sidebar():
         sidebar_frame.grid(row=1, column=0, sticky="ns")  # Restore sidebar
         toggle_button.configure(text="X")  # Show the close icon
     sidebar_visible = not sidebar_visible
-
 
 # Top Navigation Bar
 nav_bar = ctk.CTkFrame(app, height=50, corner_radius=0)
@@ -48,9 +47,8 @@ alerts_button = ctk.CTkButton(sidebar_frame, text="Threat Reports",
                               command=lambda: update_main_content("Loading Threats..."))
 alerts_button.pack(pady=10, padx=10, fill="x")
 
-alerts_button = ctk.CTkButton(sidebar_frame, text="Contact Us",
-                              command=lambda: update_main_content("Email Or text us right away!"))
-alerts_button.pack(pady=10, padx=10, fill="x")
+contact_button = ctk.CTkButton(sidebar_frame, text="Contact Us", command=lambda: create_contact_us_page())
+contact_button.pack(pady=10, padx=10, fill="x")
 
 settings_button = ctk.CTkButton(sidebar_frame, text="Settings", command=lambda: update_main_content("Settings Page..."))
 settings_button.pack(pady=10, padx=10, fill="x")
@@ -62,7 +60,6 @@ main_content_frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
 main_content_frame.grid_rowconfigure((0, 1), weight=1)
 main_content_frame.grid_columnconfigure((0, 1), weight=1)
 
-
 # Update Main Content for non-dashboard views
 def update_main_content(message):
     for widget in main_content_frame.winfo_children():
@@ -70,7 +67,6 @@ def update_main_content(message):
 
     label = ctk.CTkLabel(main_content_frame, text=message, font=("Arial", 20))
     label.pack(expand=True)
-
 
 # Update Main Content for dashboard
 def update_dashboard():
@@ -94,6 +90,38 @@ def update_dashboard():
         value_label = ctk.CTkLabel(frame, text=stat["value"], font=("Arial", 24))
         value_label.pack()
 
+# Contact Us Page
+def create_contact_us_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="Contact Us", font=("Arial", 20, "bold"))
+    title_label.pack(pady=20)
+
+    # Email
+    email_label = ctk.CTkLabel(main_content_frame, text="Email: GUARDIANSUPPORT@GMAIL.COM", font=("Arial", 14))
+    email_label.pack(pady=10)
+
+    # Feedback Textbox
+    feedback_label = ctk.CTkLabel(main_content_frame, text="Write to Us:", font=("Arial", 14))
+    feedback_label.pack(pady=10)
+
+    feedback_textbox = ctk.CTkTextbox(main_content_frame, width=400, height=150)
+    feedback_textbox.pack(pady=10)
+
+    # Submit Button
+    def submit_feedback():
+        feedback = feedback_textbox.get("1.0", "end").strip()
+        if feedback:
+            print(f"Feedback Submitted: {feedback}")  # Replace with actual submission logic
+            feedback_textbox.delete("1.0", "end")
+            messagebox.showinfo("Thank you!", "Your feedback has been submitted.")
+        else:
+            messagebox.showwarning("Empty Message", "Please write something before submitting.")
+
+    submit_button = ctk.CTkButton(main_content_frame, text="Submit", command=submit_feedback)
+    submit_button.pack(pady=20)
 
 # Set the initial dashboard
 update_dashboard()
