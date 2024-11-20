@@ -48,6 +48,10 @@ alerts_button = ctk.CTkButton(sidebar_frame, text="Threat Reports",
                               command=lambda: update_main_content("Loading Threats..."))
 alerts_button.pack(pady=10, padx=10, fill="x")
 
+alerts_button = ctk.CTkButton(sidebar_frame, text="Contact Us",
+                              command=lambda: update_main_content("Email Or text us right away!"))
+alerts_button.pack(pady=10, padx=10, fill="x")
+
 settings_button = ctk.CTkButton(sidebar_frame, text="Settings", command=lambda: update_main_content("Settings Page..."))
 settings_button.pack(pady=10, padx=10, fill="x")
 
