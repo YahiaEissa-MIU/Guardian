@@ -9,6 +9,165 @@ app.title("Guardian")
 # Sidebar visibility flag
 sidebar_visible = True
 
+
+
+def create_settings_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="Settings", font=("Arial", 20, "bold"))
+    title_label.pack(pady=20)
+
+    # General Settings Frame
+    general_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    general_frame.pack(pady=10, padx=20, fill="x")
+
+    general_label = ctk.CTkLabel(general_frame, text="General Settings", font=("Arial", 16, "bold"))
+    general_label.pack(anchor="w", pady=10, padx=10)
+
+    # Auto-Response Toggle
+    auto_response_var = ctk.BooleanVar(value=False)
+
+    def toggle_auto_response():
+        print(f"Auto-Response Mode: {'Enabled' if auto_response_var.get() else 'Disabled'}")
+
+    auto_response_toggle = ctk.CTkSwitch(
+        general_frame,
+        text="Automatically detect and respond to ransomware threats.",
+        variable=auto_response_var,
+        command=toggle_auto_response,
+    )
+    auto_response_toggle.pack(anchor="w", padx=20, pady=5)
+
+    # Notification Preferences
+    notify_var = ctk.BooleanVar(value=True)
+
+    def toggle_notifications():
+        print(f"Notifications: {'Enabled' if notify_var.get() else 'Disabled'}")
+
+    notify_toggle = ctk.CTkSwitch(
+        general_frame,
+        text="Notify me when threats are detected or resolved.",
+        variable=notify_var,
+        command=toggle_notifications,
+    )
+    notify_toggle.pack(anchor="w", padx=20, pady=5)
+
+    # Security Settings Frame
+    security_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    security_frame.pack(pady=10, padx=20, fill="x")
+
+    security_label = ctk.CTkLabel(security_frame, text="Security Settings", font=("Arial", 16, "bold"))
+    security_label.pack(anchor="w", pady=10, padx=10)
+
+    # Real-Time Protection Toggle
+    real_time_var = ctk.BooleanVar(value=True)
+
+    def toggle_real_time():
+        print(f"Real-Time Protection: {'Enabled' if real_time_var.get() else 'Disabled'}")
+
+    real_time_toggle = ctk.CTkSwitch(
+        security_frame,
+        text="Continuously monitor for ransomware activities.",
+        variable=real_time_var,
+        command=toggle_real_time,
+    )
+    real_time_toggle.pack(anchor="w", padx=20, pady=5)
+
+    # Backup & Recovery Settings Frame
+    backup_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    backup_frame.pack(pady=10, padx=20, fill="x")
+
+    backup_label = ctk.CTkLabel(backup_frame, text="Backup & Recovery Settings", font=("Arial", 16, "bold"))
+    backup_label.pack(anchor="w", pady=10, padx=10)
+
+    # File Recovery Options
+    recovery_var = ctk.StringVar(value="Most Recent Backup")
+
+    recovery_label = ctk.CTkLabel(backup_frame, text="File Recovery Options:", font=("Arial", 14))
+    recovery_label.pack(anchor="w", padx=20, pady=5)
+
+    recovery_dropdown = ctk.CTkOptionMenu(
+        backup_frame, values=["Most Recent Backup", "Custom Recovery Point"], variable=recovery_var
+    )
+    recovery_dropdown.pack(anchor="w", padx=20, pady=5)
+
+    # Automatic Backup Toggle
+    auto_backup_var = ctk.BooleanVar(value=True)
+
+    def toggle_auto_backup():
+        print(f"Automatic Backup: {'Enabled' if auto_backup_var.get() else 'Disabled'}")
+
+    auto_backup_toggle = ctk.CTkSwitch(
+        backup_frame,
+        text="Enable automatic backup of critical files.",
+        variable=auto_backup_var,
+        command=toggle_auto_backup,
+    )
+    auto_backup_toggle.pack(anchor="w", padx=20, pady=5)
+
+    # Backup Frequency Dropdown
+    frequency_var = ctk.StringVar(value="Daily")
+
+    frequency_label = ctk.CTkLabel(backup_frame, text="Backup Frequency:", font=("Arial", 14))
+    frequency_label.pack(anchor="w", padx=20, pady=5)
+
+    frequency_dropdown = ctk.CTkOptionMenu(backup_frame, values=["Hourly", "Daily", "Weekly"], variable=frequency_var)
+    frequency_dropdown.pack(anchor="w", padx=20, pady=5)
+
+    # Advanced Options (Expandable)
+    advanced_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    advanced_frame.pack(pady=10, padx=20, fill="x")
+
+    advanced_label = ctk.CTkLabel(advanced_frame, text="Advanced Options", font=("Arial", 16, "bold"))
+    advanced_label.pack(anchor="w", pady=10, padx=10)
+
+    # Exclude Files/Folders
+    exclude_label = ctk.CTkLabel(advanced_frame, text="Exclude Files/Folders from backups:", font=("Arial", 14))
+    exclude_label.pack(anchor="w", padx=20, pady=5)
+
+    exclude_entry = ctk.CTkEntry(advanced_frame, placeholder_text="Enter file/folder paths")
+    exclude_entry.pack(anchor="w", padx=20, pady=5)
+
+    # Reset to Default Button
+    def reset_to_default():
+        auto_response_var.set(False)
+        notify_var.set(True)
+        real_time_var.set(True)
+        recovery_var.set("Most Recent Backup")
+        auto_backup_var.set(True)
+        frequency_var.set("Daily")
+        exclude_entry.delete(0, "end")
+        print("Settings reset to default.")
+
+    reset_button = ctk.CTkButton(advanced_frame, text="Reset to Default", command=reset_to_default)
+    reset_button.pack(anchor="w", padx=20, pady=10)
+
+    # Educational Resources Frame
+    resources_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    resources_frame.pack(pady=10, padx=20, fill="x")
+
+    resources_label = ctk.CTkLabel(resources_frame, text="Educational Resources", font=("Arial", 16, "bold"))
+    resources_label.pack(anchor="w", pady=10, padx=10)
+
+    # Learn About Ransomware Button
+    def open_guide():
+        print("Opening ransomware guide...")  # Replace with actual functionality
+
+    guide_button = ctk.CTkButton(resources_frame, text="Learn About Ransomware", command=open_guide)
+    guide_button.pack(anchor="w", padx=20, pady=5)
+
+    # Incident History Button
+    def open_incident_history():
+        print("Opening incident history...")  # Replace with actual functionality
+
+    history_button = ctk.CTkButton(resources_frame, text="View Incident History", command=open_incident_history)
+    history_button.pack(anchor="w", padx=20, pady=5)
+
+
+
+
 # Toggle sidebar visibility
 def toggle_sidebar():
     global sidebar_visible
@@ -50,7 +209,8 @@ alerts_button.pack(pady=10, padx=10, fill="x")
 contact_button = ctk.CTkButton(sidebar_frame, text="Contact Us", command=lambda: create_contact_us_page())
 contact_button.pack(pady=10, padx=10, fill="x")
 
-settings_button = ctk.CTkButton(sidebar_frame, text="Settings", command=lambda: update_main_content("Settings Page..."))
+settings_button = ctk.CTkButton(sidebar_frame, text="Settings",   command=create_settings_page
+)
 settings_button.pack(pady=10, padx=10, fill="x")
 
 # Main Content Frame
@@ -122,6 +282,9 @@ def create_contact_us_page():
 
     submit_button = ctk.CTkButton(main_content_frame, text="Submit", command=submit_feedback)
     submit_button.pack(pady=20)
+
+
+
 
 # Set the initial dashboard
 update_dashboard()
