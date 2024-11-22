@@ -9,17 +9,101 @@ app.title("Guardian")
 # Sidebar visibility flag
 sidebar_visible = True
 
-
-def create_settings_page():
+def create_incident_response_history_page():
+    # Clear the main content frame
     for widget in main_content_frame.winfo_children():
         widget.destroy()
 
+    # Example data (replace with dynamic data as needed)
+    incidents = [
+        {
+            "date": "2024-11-20",
+            "time": "14:32",
+            "type": "Detected Ransomware: LockBit",
+            "action": "Isolated files, initiated backup",
+            "outcome": "Threat neutralized, data restored",
+        },
+        {
+            "date": "2024-11-18",
+            "time": "09:15",
+            "type": "Suspicious Activity: Unknown Encryption",
+            "action": "Quarantined process",
+            "outcome": "Investigated, false positive",
+        },
+    ]
+
+    # Scrollable frame for timeline
+    scrollable_frame = ctk.CTkScrollableFrame(main_content_frame, width=600, height=500, corner_radius=10)
+    scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
     # Title
-    title_label = ctk.CTkLabel(main_content_frame, text="Settings", font=("Arial", 20, "bold"))
+    title_label = ctk.CTkLabel(scrollable_frame, text="Incident Response History", font=("Arial", 20, "bold"))
+    title_label.pack(pady=20)
+
+    # Incident timeline
+    for incident in incidents:
+        incident_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
+        incident_frame.pack(fill="x", pady=5, padx=10)
+
+        date_time_label = ctk.CTkLabel(
+            incident_frame,
+            text=f"{incident['date']} | {incident['time']}",
+            font=("Arial", 14, "bold"),
+        )
+        date_time_label.pack(anchor="w", pady=2, padx=10)
+
+        type_label = ctk.CTkLabel(
+            incident_frame,
+            text=f"Type: {incident['type']}",
+            font=("Arial", 12),
+        )
+        type_label.pack(anchor="w", padx=10)
+
+        action_label = ctk.CTkLabel(
+            incident_frame,
+            text=f"Action Taken: {incident['action']}",
+            font=("Arial", 12),
+        )
+        action_label.pack(anchor="w", padx=10)
+
+        outcome_label = ctk.CTkLabel(
+            incident_frame,
+            text=f"Outcome: {incident['outcome']}",
+            font=("Arial", 12, "italic"),
+        )
+        outcome_label.pack(anchor="w", padx=10, pady=5)
+
+    # Export Button
+    def export_to_csv():
+        # Logic to export incidents to CSV
+        with open("incident_history.csv", "w") as file:
+            file.write("Date,Time,Type,Action,Outcome\n")
+            for incident in incidents:
+                file.write(
+                    f"{incident['date']},{incident['time']},{incident['type']},{incident['action']},{incident['outcome']}\n"
+                )
+        messagebox.showinfo("Export Successful", "Incident history exported to incident_history.csv")
+
+    export_button = ctk.CTkButton(scrollable_frame, text="Export to CSV", command=export_to_csv)
+    export_button.pack(pady=10)
+
+
+
+def create_settings_page():
+    # Clear the main content frame
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Create a scrollable frame
+    scrollable_frame = ctk.CTkScrollableFrame(main_content_frame, width=600, height=500, corner_radius=10)
+    scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+    # Title
+    title_label = ctk.CTkLabel(scrollable_frame, text="Settings", font=("Arial", 20, "bold"))
     title_label.pack(pady=20)
 
     # General Settings Frame
-    general_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    general_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
     general_frame.pack(pady=10, padx=20, fill="x")
 
     general_label = ctk.CTkLabel(general_frame, text="General Settings", font=("Arial", 16, "bold"))
@@ -54,7 +138,7 @@ def create_settings_page():
     notify_toggle.pack(anchor="w", padx=20, pady=5)
 
     # Security Settings Frame
-    security_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    security_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
     security_frame.pack(pady=10, padx=20, fill="x")
 
     security_label = ctk.CTkLabel(security_frame, text="Security Settings", font=("Arial", 16, "bold"))
@@ -75,7 +159,7 @@ def create_settings_page():
     real_time_toggle.pack(anchor="w", padx=20, pady=5)
 
     # Backup & Recovery Settings Frame
-    backup_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    backup_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
     backup_frame.pack(pady=10, padx=20, fill="x")
 
     backup_label = ctk.CTkLabel(backup_frame, text="Backup & Recovery Settings", font=("Arial", 16, "bold"))
@@ -116,7 +200,7 @@ def create_settings_page():
     frequency_dropdown.pack(anchor="w", padx=20, pady=5)
 
     # Advanced Options (Expandable)
-    advanced_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    advanced_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
     advanced_frame.pack(pady=10, padx=20, fill="x")
 
     advanced_label = ctk.CTkLabel(advanced_frame, text="Advanced Options", font=("Arial", 16, "bold"))
@@ -144,7 +228,7 @@ def create_settings_page():
     reset_button.pack(anchor="w", padx=20, pady=10)
 
     # Educational Resources Frame
-    resources_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    resources_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
     resources_frame.pack(pady=10, padx=20, fill="x")
 
     resources_label = ctk.CTkLabel(resources_frame, text="Educational Resources", font=("Arial", 16, "bold"))
@@ -156,15 +240,6 @@ def create_settings_page():
 
     guide_button = ctk.CTkButton(resources_frame, text="Learn About Ransomware", command=open_guide)
     guide_button.pack(anchor="w", padx=20, pady=5)
-
-    # Incident History Button
-    def open_incident_history():
-        print("Opening incident history...")  # Replace with actual functionality
-
-    history_button = ctk.CTkButton(resources_frame, text="View Incident History", command=open_incident_history)
-    history_button.pack(anchor="w", padx=20, pady=5)
-
-
 # Toggle sidebar visibility
 def toggle_sidebar():
     global sidebar_visible
@@ -200,9 +275,13 @@ dashboard_button.pack(pady=10, padx=10, fill="x")
 scan_button = ctk.CTkButton(sidebar_frame, text="Alerts", command=lambda: update_main_content("Viewing Alerts..."))
 scan_button.pack(pady=10, padx=10, fill="x")
 
-alerts_button = ctk.CTkButton(sidebar_frame, text="Incident Response History",
-                              command=lambda: update_main_content("Loading Incident History..."))
-alerts_button.pack(pady=10, padx=10, fill="x")
+incident_button = ctk.CTkButton(
+    sidebar_frame,
+    text="Incident Response History",
+    command=create_incident_response_history_page
+)
+incident_button.pack(pady=10, padx=10, fill="x")
+
 
 alerts_button = ctk.CTkButton(sidebar_frame, text="System Status",
                               command=lambda: update_main_content("Status..."))

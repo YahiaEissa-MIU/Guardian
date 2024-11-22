@@ -1,0 +1,3 @@
+Date,Time,Type,Action,Outcome
+2024-11-20,14:32,Detected Ransomware: LockBit,Isolated files, initiated backup,Threat neutralized, data restored
+2024-11-18,09:15,Suspicious Activity: Unknown Encryption,Quarantined process,Investigated, false positive
