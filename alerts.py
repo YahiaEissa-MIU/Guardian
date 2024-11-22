@@ -1,5 +1,74 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import PhotoImage
+from PIL import Image, ImageTk
+import subprocess
+# Function to switch between pages
+def show_frame(frame):
+    frame.tkraise()
+
+# Function to open the alert page (AboutSystem.py)
+def open_about_page():
+    subprocess.run(["python", "AboutSystem.py"])
+
+# Tkinter window setup
+root = tk.Tk()
+root.title("Ransomware Alerts Dashboard")
+root.geometry("800x500")
+root.configure(bg="white")
+
+# Function to resize image icons (updated for newer Pillow versions)
+def resize_icon(image_path, size=(40, 40)):
+    image = Image.open(image_path)
+    image = image.resize(size, Image.Resampling.LANCZOS)  # Replaced ANTIALIAS with LANCZOS
+    return ImageTk.PhotoImage(image)
+
+# Create resized navigation icons
+alert_icon = resize_icon("alert.png")  # Replace with actual icon path
+about_icon = resize_icon("about.png")  # Replace with actual icon path
+
+# Vertical Navigation Bar
+nav_bar = tk.Frame(root, bg="red", width=150)
+nav_bar.pack(side=tk.LEFT, fill=tk.Y)
+
+# Navigation Buttons
+
+alert_button = tk.Button(
+    nav_bar,
+    text="Alerts",
+    image=alert_icon,
+    compound="top",
+    bg="red",
+    fg="white",
+    font=("Arial", 12, "bold"),
+    command=lambda: show_frame(alert_page),
+    relief=tk.FLAT
+)
+alert_button.pack(pady=20)
+
+about_button = tk.Button(
+    nav_bar,
+    text="About",
+    image=about_icon,
+    compound="top",
+    bg="red",
+    fg="white",
+    font=("Arial", 12, "bold"),
+    command=open_about_page,  # Link to AboutSystem.py page 
+    relief=tk.FLAT
+)
+about_button.pack(pady=20)
+
+# Container for pages
+main_frame = tk.Frame(root, bg="white")
+main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+# Pages
+alert_page = tk.Frame(main_frame, bg="white")
+about_page = tk.Frame(main_frame, bg="white")
+
+for frame in (alert_page, about_page):
+    frame.grid(row=0, column=0, sticky="nsew")
 
 # Sample data with multiple alerts
 alerts_data = [
@@ -31,12 +100,6 @@ def acknowledge_alert():
         return
     tree.delete(selected_item)
     details_text.set("Alert acknowledged and removed.")
-
-# Tkinter window setup
-root = tk.Tk()
-root.title("Ransomware Alerts Dashboard")
-root.geometry("800x500")
-root.configure(bg="white")
 
 # Header Frame
 header_frame = tk.Frame(root, bg="red")

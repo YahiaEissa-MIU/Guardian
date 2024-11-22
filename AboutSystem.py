@@ -1,26 +1,91 @@
 import tkinter as tk
+from tkinter import PhotoImage
+from PIL import Image, ImageTk
+import subprocess  # Used for opening the alert page (alert.py)
 
 # Function to handle version updates button (placeholder for future functionality)
 def check_for_updates():
     update_message.set("You are using the latest version. No updates available.")
 
+# Function to switch between pages
+def show_frame(frame):
+    frame.tkraise()
+
+# Function to open the alert page (alert.py)
+def open_alert_page():
+    subprocess.run(["python", "alerts.py"])
+
 # Tkinter window setup
 root = tk.Tk()
-root.title("About Guardian")
-root.geometry("600x400")
+root.title("Guardian - Ransomware Detection System")
+root.geometry("900x600")
 root.configure(bg="white")
 
-# Header Frame
-header_frame = tk.Frame(root, bg="red")
-header_frame.pack(fill=tk.X)
 
-header_label = tk.Label(
-    header_frame, text="About Guardian", bg="red", fg="white", font=("Arial", 20, "bold")
+# Function to resize image icons (updated for newer Pillow versions)
+def resize_icon(image_path, size=(40, 40)):
+    image = Image.open(image_path)
+    image = image.resize(size, Image.Resampling.LANCZOS)  # Replaced ANTIALIAS with LANCZOS
+    return ImageTk.PhotoImage(image)
+
+
+# Create resized navigation icons
+alert_icon = resize_icon("alert.png")  # Replace with actual icon path
+about_icon = resize_icon("about.png")  # Replace with actual icon path
+
+# Vertical Navigation Bar
+nav_bar = tk.Frame(root, bg="red", width=150)
+nav_bar.pack(side=tk.LEFT, fill=tk.Y)
+
+# Navigation Buttons
+
+alert_button = tk.Button(
+    nav_bar,
+    text="Alerts",
+    image=alert_icon,
+    compound="top",
+    bg="red",
+    fg="white",
+    font=("Arial", 12, "bold"),
+    command=open_alert_page,  # Link to alert.py page
+    relief=tk.FLAT
 )
-header_label.pack(pady=5)
+alert_button.pack(pady=20)
 
-# Content Frame
-content_frame = tk.Frame(root, bg="white", padx=20, pady=20)
+about_button = tk.Button(
+    nav_bar,
+    text="About",
+    image=about_icon,
+    compound="top",
+    bg="red",
+    fg="white",
+    font=("Arial", 12, "bold"),
+    command=lambda: show_frame(about_page),
+    relief=tk.FLAT
+)
+about_button.pack(pady=20)
+
+
+
+# Container for pages
+main_frame = tk.Frame(root, bg="white")
+main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+# Pages
+alert_page = tk.Frame(main_frame, bg="white")
+about_page = tk.Frame(main_frame, bg="white")
+
+for frame in (alert_page, about_page):
+    frame.grid(row=0, column=0, sticky="nsew")
+
+# -------------------- About Page --------------------
+about_header = tk.Label(
+    about_page, text="About Guardian", bg="red", fg="white", font=("Arial", 20, "bold")
+)
+about_header.pack(fill=tk.X, pady=5)
+
+# Content Frame for About Page
+content_frame = tk.Frame(about_page, bg="white", padx=20, pady=20)
 content_frame.pack(fill=tk.BOTH, expand=True)
 
 # Overview Section
@@ -62,7 +127,7 @@ credits_text = (
     "- Contributor: Nada Abdelrahman\n"
     "- Contributor: Donya Hany\n"
     "- Contributor: Abdelrahman Walid\n"
-    "- Contributor: Ali Ahmed\n"
+    "- Contributor: Ali Ahmed \n"
 )
 credits_box = tk.Label(
     content_frame,
@@ -120,5 +185,7 @@ footer_label = tk.Label(
 )
 footer_label.pack(pady=5)
 
-# Run the App
+
+
+# Run the application
 root.mainloop()
