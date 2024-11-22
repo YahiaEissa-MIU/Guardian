@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 from tkinter import messagebox  # For feedback messages
 
@@ -10,84 +11,47 @@ app.title("Guardian")
 sidebar_visible = True
 
 def create_incident_response_history_page():
-    # Clear the main content frame
     for widget in main_content_frame.winfo_children():
         widget.destroy()
 
-    # Example data (replace with dynamic data as needed)
-    incidents = [
-        {
-            "date": "2024-11-20",
-            "time": "14:32",
-            "type": "Detected Ransomware: LockBit",
-            "action": "Isolated files, initiated backup",
-            "outcome": "Threat neutralized, data restored",
-        },
-        {
-            "date": "2024-11-18",
-            "time": "09:15",
-            "type": "Suspicious Activity: Unknown Encryption",
-            "action": "Quarantined process",
-            "outcome": "Investigated, false positive",
-        },
-    ]
-
-    # Scrollable frame for timeline
-    scrollable_frame = ctk.CTkScrollableFrame(main_content_frame, width=600, height=500, corner_radius=10)
-    scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
     # Title
-    title_label = ctk.CTkLabel(scrollable_frame, text="Incident Response History", font=("Arial", 20, "bold"))
+    title_label = ctk.CTkLabel(main_content_frame, text="Incident Response History", font=("Arial", 20, "bold"))
     title_label.pack(pady=20)
 
-    # Incident timeline
+    # Example list of incidents
+    incidents = [
+        {"Date": "2024-11-01", "Incident": "Detected ransomware: LockBit", "Action": "Files isolated"},
+        {"Date": "2024-11-10", "Incident": "Backup initiated", "Action": "All files backed up"},
+    ]
+
+    # Display incidents
     for incident in incidents:
-        incident_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
-        incident_frame.pack(fill="x", pady=5, padx=10)
+        frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+        frame.pack(fill="x", pady=5, padx=20)
 
-        date_time_label = ctk.CTkLabel(
-            incident_frame,
-            text=f"{incident['date']} | {incident['time']}",
-            font=("Arial", 14, "bold"),
-        )
-        date_time_label.pack(anchor="w", pady=2, padx=10)
+        details = f"{incident['Date']} - {incident['Incident']} - Action: {incident['Action']}"
+        label = ctk.CTkLabel(frame, text=details, font=("Arial", 14))
+        label.pack(anchor="w", pady=5, padx=10)
 
-        type_label = ctk.CTkLabel(
-            incident_frame,
-            text=f"Type: {incident['type']}",
-            font=("Arial", 12),
-        )
-        type_label.pack(anchor="w", padx=10)
+    # Buttons
+    button_frame = ctk.CTkFrame(main_content_frame)
+    button_frame.pack(pady=20)
 
-        action_label = ctk.CTkLabel(
-            incident_frame,
-            text=f"Action Taken: {incident['action']}",
-            font=("Arial", 12),
-        )
-        action_label.pack(anchor="w", padx=10)
+    # Export as PDF Button
+    export_button = ctk.CTkButton(
+        button_frame,
+        text="Export as PDF",
+        command=lambda: print("Exporting to PDF...")  # Replace with actual export logic
+    )
+    export_button.pack(side="left", padx=10)
 
-        outcome_label = ctk.CTkLabel(
-            incident_frame,
-            text=f"Outcome: {incident['outcome']}",
-            font=("Arial", 12, "italic"),
-        )
-        outcome_label.pack(anchor="w", padx=10, pady=5)
-
-    # Export Button
-    def export_to_csv():
-        # Logic to export incidents to CSV
-        with open("incident_history.csv", "w") as file:
-            file.write("Date,Time,Type,Action,Outcome\n")
-            for incident in incidents:
-                file.write(
-                    f"{incident['date']},{incident['time']},{incident['type']},{incident['action']},{incident['outcome']}\n"
-                )
-        messagebox.showinfo("Export Successful", "Incident history exported to incident_history.csv")
-
-    export_button = ctk.CTkButton(scrollable_frame, text="Export to CSV", command=export_to_csv)
-    export_button.pack(pady=10)
-
-
+    # Print Button
+    printer_button = ctk.CTkButton(
+        button_frame,
+        text=" 🖨️ Print",
+        command=lambda: print("Printing...")  # Replace with actual print logic
+    )
+    printer_button.pack(side="left", padx=10)
 
 def create_settings_page():
     # Clear the main content frame
