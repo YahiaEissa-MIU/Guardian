@@ -10,7 +10,6 @@ app.title("Guardian")
 sidebar_visible = True
 
 
-
 def create_settings_page():
     for widget in main_content_frame.winfo_children():
         widget.destroy()
@@ -166,8 +165,6 @@ def create_settings_page():
     history_button.pack(anchor="w", padx=20, pady=5)
 
 
-
-
 # Toggle sidebar visibility
 def toggle_sidebar():
     global sidebar_visible
@@ -178,6 +175,7 @@ def toggle_sidebar():
         sidebar_frame.grid(row=1, column=0, sticky="ns")  # Restore sidebar
         toggle_button.configure(text="X")  # Show the close icon
     sidebar_visible = not sidebar_visible
+
 
 # Top Navigation Bar
 nav_bar = ctk.CTkFrame(app, height=50, corner_radius=0)
@@ -202,15 +200,23 @@ dashboard_button.pack(pady=10, padx=10, fill="x")
 scan_button = ctk.CTkButton(sidebar_frame, text="Alerts", command=lambda: update_main_content("Viewing Alerts..."))
 scan_button.pack(pady=10, padx=10, fill="x")
 
-alerts_button = ctk.CTkButton(sidebar_frame, text="Threat Reports",
-                              command=lambda: update_main_content("Loading Threats..."))
+alerts_button = ctk.CTkButton(sidebar_frame, text="Incident Response History",
+                              command=lambda: update_main_content("Loading Incident History..."))
+alerts_button.pack(pady=10, padx=10, fill="x")
+
+alerts_button = ctk.CTkButton(sidebar_frame, text="System Status",
+                              command=lambda: update_main_content("Status..."))
 alerts_button.pack(pady=10, padx=10, fill="x")
 
 contact_button = ctk.CTkButton(sidebar_frame, text="Contact Us", command=lambda: create_contact_us_page())
 contact_button.pack(pady=10, padx=10, fill="x")
 
-settings_button = ctk.CTkButton(sidebar_frame, text="Settings",   command=create_settings_page
-)
+alerts_button = ctk.CTkButton(sidebar_frame, text="About System",
+                              command=lambda: update_main_content("About..."))
+alerts_button.pack(pady=10, padx=10, fill="x")
+
+settings_button = ctk.CTkButton(sidebar_frame, text="Settings", command=create_settings_page
+                                )
 settings_button.pack(pady=10, padx=10, fill="x")
 
 # Main Content Frame
@@ -220,6 +226,7 @@ main_content_frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
 main_content_frame.grid_rowconfigure((0, 1), weight=1)
 main_content_frame.grid_columnconfigure((0, 1), weight=1)
 
+
 # Update Main Content for non-dashboard views
 def update_main_content(message):
     for widget in main_content_frame.winfo_children():
@@ -227,6 +234,7 @@ def update_main_content(message):
 
     label = ctk.CTkLabel(main_content_frame, text=message, font=("Arial", 20))
     label.pack(expand=True)
+
 
 # Update Main Content for dashboard
 def update_dashboard():
@@ -249,6 +257,7 @@ def update_dashboard():
 
         value_label = ctk.CTkLabel(frame, text=stat["value"], font=("Arial", 24))
         value_label.pack()
+
 
 # Contact Us Page
 def create_contact_us_page():
@@ -282,8 +291,6 @@ def create_contact_us_page():
 
     submit_button = ctk.CTkButton(main_content_frame, text="Submit", command=submit_feedback)
     submit_button.pack(pady=20)
-
-
 
 
 # Set the initial dashboard
