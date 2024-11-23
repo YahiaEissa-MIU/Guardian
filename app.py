@@ -1,5 +1,6 @@
 
 import customtkinter as ctk
+import subprocess
 from tkinter import messagebox  # For feedback messages
 
 # Initialize the app
@@ -215,6 +216,13 @@ def toggle_sidebar():
         toggle_button.configure(text="X")  # Show the close icon
     sidebar_visible = not sidebar_visible
 
+# Function to open the alert page (AboutSystem.py)
+def open_alert_page():
+    subprocess.run(["python", "alerts.py"])
+
+# Function to open the about page (AboutSystem.py)
+def open_about_page():
+    subprocess.run(["python", "AboutSystem.py"])
 
 # Top Navigation Bar
 nav_bar = ctk.CTkFrame(app, height=50, corner_radius=0)
@@ -236,7 +244,7 @@ sidebar_label.pack(pady=20)
 dashboard_button = ctk.CTkButton(sidebar_frame, text="Dashboard", command=lambda: update_dashboard())
 dashboard_button.pack(pady=10, padx=10, fill="x")
 
-scan_button = ctk.CTkButton(sidebar_frame, text="Alerts", command=lambda: update_main_content("Viewing Alerts..."))
+scan_button = ctk.CTkButton(sidebar_frame, text="Alerts", command=open_alert_page)
 scan_button.pack(pady=10, padx=10, fill="x")
 
 incident_button = ctk.CTkButton(
@@ -255,7 +263,7 @@ contact_button = ctk.CTkButton(sidebar_frame, text="Contact Us", command=lambda:
 contact_button.pack(pady=10, padx=10, fill="x")
 
 alerts_button = ctk.CTkButton(sidebar_frame, text="About System",
-                              command=lambda: update_main_content("About..."))
+                              command= open_about_page)
 alerts_button.pack(pady=10, padx=10, fill="x")
 
 settings_button = ctk.CTkButton(sidebar_frame, text="Settings", command=create_settings_page

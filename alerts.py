@@ -1,74 +1,14 @@
-import tkinter as tk
-from tkinter import ttk
-from tkinter import PhotoImage
-from PIL import Image, ImageTk
+import customtkinter as ctk
 import subprocess
-# Function to switch between pages
-def show_frame(frame):
-    frame.tkraise()
+from tkinter import ttk  # Import ttk for Treeview
 
-# Function to open the alert page (AboutSystem.py)
-def open_about_page():
-    subprocess.run(["python", "AboutSystem.py"])
+# Initialize the app
+app = ctk.CTk()
+app.geometry("1200x600")
+app.title("Guardian")
 
-# Tkinter window setup
-root = tk.Tk()
-root.title("Ransomware Alerts Dashboard")
-root.geometry("800x500")
-root.configure(bg="white")
-
-# Function to resize image icons (updated for newer Pillow versions)
-def resize_icon(image_path, size=(40, 40)):
-    image = Image.open(image_path)
-    image = image.resize(size, Image.Resampling.LANCZOS)  # Replaced ANTIALIAS with LANCZOS
-    return ImageTk.PhotoImage(image)
-
-# Create resized navigation icons
-alert_icon = resize_icon("alert.png")  # Replace with actual icon path
-about_icon = resize_icon("about.png")  # Replace with actual icon path
-
-# Vertical Navigation Bar
-nav_bar = tk.Frame(root, bg="red", width=150)
-nav_bar.pack(side=tk.LEFT, fill=tk.Y)
-
-# Navigation Buttons
-
-alert_button = tk.Button(
-    nav_bar,
-    text="Alerts",
-    image=alert_icon,
-    compound="top",
-    bg="red",
-    fg="white",
-    font=("Arial", 12, "bold"),
-    command=lambda: show_frame(alert_page),
-    relief=tk.FLAT
-)
-alert_button.pack(pady=20)
-
-about_button = tk.Button(
-    nav_bar,
-    text="About",
-    image=about_icon,
-    compound="top",
-    bg="red",
-    fg="white",
-    font=("Arial", 12, "bold"),
-    command=open_about_page,  # Link to AboutSystem.py page 
-    relief=tk.FLAT
-)
-about_button.pack(pady=20)
-
-# Container for pages
-main_frame = tk.Frame(root, bg="white")
-main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-# Pages
-alert_page = tk.Frame(main_frame, bg="white")
-about_page = tk.Frame(main_frame, bg="white")
-
-for frame in (alert_page, about_page):
-    frame.grid(row=0, column=0, sticky="nsew")
+# Sidebar visibility flag
+sidebar_visible = True
 
 # Sample data with multiple alerts
 alerts_data = [
@@ -80,96 +20,133 @@ alerts_data = [
     {"timestamp": "2024-11-22 12:30", "severity": "Low", "type": "Petya", "file": "readme.md", "actions": "Logged"},
 ]
 
-# Function to display alert details
-def display_details(event):
-    selected_item = tree.focus()
-    if not selected_item:
-        return
-    alert_details = tree.item(selected_item, "values")
-    details_text.set(
-        f"Type: {alert_details[1]}\n"
-        f"Affected File: {alert_details[2]}\n"
-        f"Actions Taken: {alert_details[3]}"
-    )
+# Function to toggle sidebar visibility
+def toggle_sidebar():
+    global sidebar_visible
+    if sidebar_visible:
+        sidebar_frame.grid_forget()  # Hide the sidebar
+        toggle_button.configure(text="☰")  # Show menu icon
+    else:
+        sidebar_frame.grid(row=1, column=0, sticky="ns")  # Show the sidebar
+        toggle_button.configure(text="X")  # Show close icon
+    sidebar_visible = not sidebar_visible
+# Function to open the about page (AboutSystem.py)
+def open_about_page():
+    subprocess.run(["python", "AboutSystem.py"])
 
-# Function to handle Acknowledge button click
-def acknowledge_alert():
-    selected_item = tree.focus()
-    if not selected_item:
-        details_text.set("Please select an alert to acknowledge.")
-        return
-    tree.delete(selected_item)
-    details_text.set("Alert acknowledged and removed.")
+    # Function to open the about page (AboutSystem.py)
+def open_dashboard_page():
+    subprocess.run(["python", "app.py"])
 
-# Header Frame
-header_frame = tk.Frame(root, bg="red")
-header_frame.pack(fill=tk.X)
-header_label = tk.Label(
-    header_frame, text="Ransomware Alerts", bg="red", fg="white", font=("Arial", 20, "bold")
-)
-header_label.pack(pady=5)
+# Function to display alerts page with acknowledgment functionality
+def show_alerts_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="Ransomware Alerts", font=("Arial", 20, "bold"))
+    title_label.pack(pady=10)
+
+    # Treeview-style alert display
+    alerts_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    alerts_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+    # Treeview (from ttk)
+    tree = ttk.Treeview(alerts_frame, columns=("Timestamp", "Type", "File", "Actions"), show="headings", height=12)
+
+    # Define Treeview columns
+    tree.heading("Timestamp", text="Timestamp")
+    tree.heading("Type", text="Threat Type")
+    tree.heading("File", text="Affected File")
+    tree.heading("Actions", text="Actions Taken")
+    tree.column("Timestamp", anchor="center", width=150)
+    tree.column("Type", anchor="center", width=150)
+    tree.column("File", anchor="w", width=300)
+    tree.column("Actions", anchor="center", width=150)
+
+    # Insert data into Treeview
+    for alert in alerts_data:
+        tree.insert("", "end", values=(alert["timestamp"], alert["type"], alert["file"], alert["actions"]))
+    tree.pack(fill="both", expand=True)
+
+    # Details Section
+    details_frame = ctk.CTkFrame(main_content_frame)
+    details_frame.pack(fill="x", padx=20, pady=10)
+
+    details_label = ctk.CTkLabel(details_frame, text="Alert Details:", font=("Arial", 14, "bold"))
+    details_label.grid(row=0, column=0, sticky="w", padx=10)
+
+    details_text = ctk.CTkLabel(details_frame, text="", font=("Arial", 12), justify="left")
+    details_text.grid(row=1, column=0, sticky="w", padx=10)
+
+    def display_details(event):
+        selected_item = tree.focus()
+        if selected_item:
+            alert_details = tree.item(selected_item, "values")
+            details_text.configure(
+                text=f"Type: {alert_details[1]}\n"
+                     f"Affected File: {alert_details[2]}\n"
+                     f"Actions Taken: {alert_details[3]}"
+            )
+
+    def acknowledge_alert():
+        selected_item = tree.focus()
+        if selected_item:
+            tree.delete(selected_item)
+            details_text.configure(text="Alert acknowledged and removed.")
+        else:
+            details_text.configure(text="Please select an alert to acknowledge.")
+
+    tree.bind("<ButtonRelease-1>", display_details)
+
+    # Acknowledge Button
+    acknowledge_button = ctk.CTkButton(main_content_frame, text="Acknowledge Alert", command=acknowledge_alert)
+    acknowledge_button.pack(pady=10)
+
+# Top Navigation Bar
+nav_bar = ctk.CTkFrame(app, height=50, corner_radius=0)
+nav_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
+
+toggle_button = ctk.CTkButton(nav_bar, text="X", command=toggle_sidebar, width=50)
+toggle_button.pack(side="left", padx=10, pady=5)
+
+nav_title = ctk.CTkLabel(nav_bar, text="Guardian", font=("Arial", 18))
+nav_title.pack(side="left", padx=20)
+
+# Sidebar Frame
+sidebar_frame = ctk.CTkFrame(app, width=200, corner_radius=0)
+sidebar_frame.grid(row=1, column=0, sticky="ns")
+
+# Sidebar Buttons
+buttons = [
+    {"text": "Dashboard", "command": open_dashboard_page},
+    {"text": "Alerts", "command": show_alerts_page},
+    {"text": "Incident Response History", "command": lambda: update_main_content("Incident Response Content")},
+    {"text": "System Status", "command": lambda: update_main_content("Status...")},
+    {"text": "Contact Us", "command": lambda: update_main_content("Contact Us")},
+    {"text": "About System", "command":open_about_page},
+    {"text": "Settings", "command": lambda: update_main_content("Settings Content")},
+]
+for button in buttons:
+    ctk.CTkButton(sidebar_frame, text=button["text"], command=button["command"]).pack(pady=10, padx=10, fill="x")
 
 # Main Content Frame
-content_frame = tk.Frame(root, bg="white")
-content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+main_content_frame = ctk.CTkFrame(app, corner_radius=10)
+main_content_frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
 
-# Treeview with Scrollbar
-tree_frame = tk.Frame(content_frame, bg="white")
-tree_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+# Default Content
+def update_main_content(message):
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+    label = ctk.CTkLabel(main_content_frame, text=message, font=("Arial", 20))
+    label.pack(expand=True)
 
-columns = ("Timestamp", "Type", "File", "Actions")
-tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=12)
+# Grid configuration
+app.grid_rowconfigure(1, weight=1)
+app.grid_columnconfigure(1, weight=1)
 
-# Scrollbar for Treeview
-scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
-tree.configure(yscrollcommand=scrollbar.set)
-scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+# Show Alerts Page by Default
+show_alerts_page()
 
-# Define Treeview Columns
-tree.heading("Timestamp", text="Timestamp")
-tree.heading("Type", text="Threat Type")
-tree.heading("File", text="Affected File")
-tree.heading("Actions", text="Actions Taken")
-tree.column("Timestamp", width=150, anchor=tk.CENTER)
-tree.column("Type", width=150, anchor=tk.CENTER)
-tree.column("File", width=200, anchor=tk.W)
-tree.column("Actions", width=150, anchor=tk.CENTER)
-
-# Insert Data into Treeview
-for alert in alerts_data:
-    severity = alert["severity"]
-    color = "red" if severity == "Critical" else "orange" if severity == "Medium" else "green"
-    tree.insert("", "end", values=(alert["timestamp"], alert["type"], alert["file"], alert["actions"]), tags=(color,))
-tree.pack(fill=tk.BOTH, expand=True)
-
-# Configure Severity Colors
-tree.tag_configure("red", foreground="red")
-tree.tag_configure("orange", foreground="orange")
-tree.tag_configure("green", foreground="green")
-
-# Details Frame
-details_frame = tk.Frame(content_frame, bg="white", padx=10, pady=10)
-details_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-
-details_label = tk.Label(details_frame, text="Alert Details", bg="white", fg="black", font=("Arial", 14, "bold"))
-details_label.pack(anchor=tk.W)
-
-details_text = tk.StringVar()
-details_box = tk.Label(details_frame, textvariable=details_text, bg="white", fg="black", font=("Arial", 12), justify=tk.LEFT, anchor="nw", wraplength=300)
-details_box.pack(fill=tk.BOTH, expand=True)
-
-# Button Frame
-button_frame = tk.Frame(details_frame, bg="white")
-button_frame.pack(fill=tk.X, pady=10)
-
-acknowledge_button = tk.Button(button_frame, text="Acknowledge Alert", bg="red", fg="white", font=("Arial", 12), command=acknowledge_alert)
-acknowledge_button.pack(side=tk.LEFT, padx=5)
-
-investigate_button = tk.Button(button_frame, text="Investigate", bg="white", fg="black", font=("Arial", 12), command=lambda: details_text.set("Investigate functionality is not implemented yet."))
-investigate_button.pack(side=tk.LEFT, padx=5)
-
-# Bind Treeview Selection Event
-tree.bind("<<TreeviewSelect>>", display_details)
-
-# Run the App
-root.mainloop()
+# Run the app
+app.mainloop()
