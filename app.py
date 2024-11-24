@@ -1,6 +1,7 @@
 
 import customtkinter as ctk
 import subprocess
+from tkinter import ttk
 from tkinter import messagebox  # For feedback messages
 
 # Initialize the app
@@ -233,43 +234,7 @@ toggle_button.pack(side="left", padx=10, pady=5)
 
 nav_title = ctk.CTkLabel(nav_bar, text="Guardian", font=("Arial", 18))
 nav_title.pack(side="left", padx=20)
-
-# Sidebar Frame
-sidebar_frame = ctk.CTkFrame(app, width=200, corner_radius=0)
-sidebar_frame.grid(row=1, column=0, sticky="ns")
-
-sidebar_label = ctk.CTkLabel(sidebar_frame, text="Menu", font=("Arial", 16))
-sidebar_label.pack(pady=20)
-
-dashboard_button = ctk.CTkButton(sidebar_frame, text="Dashboard", command=lambda: update_dashboard())
-dashboard_button.pack(pady=10, padx=10, fill="x")
-
-scan_button = ctk.CTkButton(sidebar_frame, text="Alerts", command=open_alert_page)
-scan_button.pack(pady=10, padx=10, fill="x")
-
-incident_button = ctk.CTkButton(
-    sidebar_frame,
-    text="Incident Response History",
-    command=create_incident_response_history_page
-)
-incident_button.pack(pady=10, padx=10, fill="x")
-
-
-alerts_button = ctk.CTkButton(sidebar_frame, text="System Status",
-                              command=lambda: update_main_content("Status..."))
-alerts_button.pack(pady=10, padx=10, fill="x")
-
-contact_button = ctk.CTkButton(sidebar_frame, text="Contact Us", command=lambda: create_contact_us_page())
-contact_button.pack(pady=10, padx=10, fill="x")
-
-alerts_button = ctk.CTkButton(sidebar_frame, text="About System",
-                              command= open_about_page)
-alerts_button.pack(pady=10, padx=10, fill="x")
-
-settings_button = ctk.CTkButton(sidebar_frame, text="Settings", command=create_settings_page
-                                )
-settings_button.pack(pady=10, padx=10, fill="x")
-
+  
 # Main Content Frame
 main_content_frame = ctk.CTkFrame(app, corner_radius=10)
 main_content_frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
@@ -303,13 +268,91 @@ def update_dashboard():
         frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
         frame.grid(row=i // 2, column=i % 2, padx=10, pady=10, sticky="nsew")
 
-        title_label = ctk.CTkLabel(frame, text=stat["title"], font=("Arial", 16))
+        title_label = ctk.CTkLabel(frame, text=stat["title"], font=("Arial", 16)) 
         title_label.pack(pady=10)
 
         value_label = ctk.CTkLabel(frame, text=stat["value"], font=("Arial", 24))
         value_label.pack()
 
+# Alerts page
+# Function to create the Alerts Page (Integrated from alerts.py)
+def create_alerts_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
 
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="Ransomware Alerts", font=("Arial", 20, "bold"))
+    title_label.pack(pady=10)
+
+    # Treeview-style alert display
+    alerts_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    alerts_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+    # Treeview (from ttk)
+    tree = ttk.Treeview(alerts_frame, columns=("Timestamp", "Type", "File", "Actions"), show="headings", height=12)
+
+    # Define Treeview columns
+    tree.heading("Timestamp", text="Timestamp")
+    tree.heading("Type", text="Threat Type")
+    tree.heading("File", text="Affected File")
+    tree.heading("Actions", text="Actions Taken")
+    tree.column("Timestamp", anchor="center", width=150)
+    tree.column("Type", anchor="center", width=150)
+    tree.column("File", anchor="w", width=300)
+    tree.column("Actions", anchor="center", width=150)
+
+    # Sample Alerts Data
+    alerts_data = [
+        {"timestamp": "2024-11-22 10:45", "severity": "Critical", "type": "Locky", "file": "document1.docx", "actions": "Quarantined"},
+    {"timestamp": "2024-11-22 11:15", "severity": "Medium", "type": "Cerber", "file": "spreadsheet.xls", "actions": "Blocked Access"},
+    {"timestamp": "2024-11-22 11:30", "severity": "Low", "type": "Wannacry", "file": "notes.txt", "actions": "Logged"},
+    {"timestamp": "2024-11-22 12:00", "severity": "Critical", "type": "Ryuk", "file": "invoice.pdf", "actions": "Quarantined"},
+    {"timestamp": "2024-11-22 12:15", "severity": "Medium", "type": "Sodinokibi", "file": "backup.zip", "actions": "Blocked Access"},
+    {"timestamp": "2024-11-22 12:30", "severity": "Low", "type": "Petya", "file": "readme.md", "actions": "Logged"},
+    ]
+
+    # Insert data into Treeview
+    for alert in alerts_data:
+        tree.insert("", "end", values=(alert["timestamp"], alert["type"], alert["file"], alert["actions"]))
+
+    tree.pack(fill="both", expand=True)
+
+    # Details Section
+    details_frame = ctk.CTkFrame(main_content_frame)
+    details_frame.pack(fill="x", padx=20, pady=10)
+
+    details_label = ctk.CTkLabel(details_frame, text="Alert Details:", font=("Arial", 14, "bold"))
+    details_label.grid(row=0, column=0, sticky="w", padx=10)
+
+    details_text = ctk.CTkLabel(details_frame, text="", font=("Arial", 12), justify="left")
+    details_text.grid(row=1, column=0, sticky="w", padx=10)
+
+    # Display alert details
+    def display_details(event):
+        selected_item = tree.focus()
+        if selected_item:
+            alert_details = tree.item(selected_item, "values")
+            details_text.configure(
+                text=f"Type: {alert_details[1]}\n"
+                     f"Affected File: {alert_details[2]}\n"
+                     f"Actions Taken: {alert_details[3]}"
+            )
+
+    tree.bind("<ButtonRelease-1>", display_details)
+
+    # Acknowledge Button
+    def acknowledge_alert():
+        selected_item = tree.focus()
+        if selected_item:
+            tree.delete(selected_item)
+            details_text.configure(text="Alert acknowledged and removed.")
+        else:
+            details_text.configure(text="Please select an alert to acknowledge.")
+
+    acknowledge_button = ctk.CTkButton(main_content_frame, text="Acknowledge Alert", command=acknowledge_alert)
+    acknowledge_button.pack(pady=10)
+
+    
 # Contact Us Page
 def create_contact_us_page():
     for widget in main_content_frame.winfo_children():
@@ -343,7 +386,38 @@ def create_contact_us_page():
     submit_button = ctk.CTkButton(main_content_frame, text="Submit", command=submit_feedback)
     submit_button.pack(pady=20)
 
+# Sidebar Frame
+sidebar_frame = ctk.CTkFrame(app, width=200, corner_radius=0)
+sidebar_frame.grid(row=1, column=0, sticky="ns")
 
+sidebar_label = ctk.CTkLabel(sidebar_frame, text="Menu", font=("Arial", 16))
+sidebar_label.pack(pady=20)
+
+dashboard_button = ctk.CTkButton(sidebar_frame, text="Dashboard", command=update_dashboard)
+dashboard_button.pack(pady=10, padx=10, fill="x")
+
+alerts_button = ctk.CTkButton(sidebar_frame, text="Alerts", command=create_alerts_page)
+alerts_button.pack(pady=10, padx=10, fill="x")
+
+incident_button = ctk.CTkButton(
+    sidebar_frame,
+    text="Incident Response History",
+    command=create_incident_response_history_page
+)
+incident_button.pack(pady=10, padx=10, fill="x")
+
+system_status_button = ctk.CTkButton(sidebar_frame, text="System Status",
+                                     command=lambda: update_main_content("Status..."))
+system_status_button.pack(pady=10, padx=10, fill="x")
+
+contact_button = ctk.CTkButton(sidebar_frame, text="Contact Us", command=create_contact_us_page)
+contact_button.pack(pady=10, padx=10, fill="x")
+
+about_button = ctk.CTkButton(sidebar_frame, text="About System", command=open_about_page)
+about_button.pack(pady=10, padx=10, fill="x")
+
+settings_button = ctk.CTkButton(sidebar_frame, text="Settings", command=create_settings_page)
+settings_button.pack(pady=10, padx=10, fill="x")
 # Set the initial dashboard
 update_dashboard()
 
