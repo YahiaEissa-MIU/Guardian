@@ -218,13 +218,6 @@ def toggle_sidebar():
         toggle_button.configure(text="X")  # Show the close icon
     sidebar_visible = not sidebar_visible
 
-# Function to open the alert page (AboutSystem.py)
-def open_alert_page():
-    subprocess.run(["python", "alerts.py"])
-
-# Function to open the about page (AboutSystem.py)
-def open_about_page():
-    subprocess.run(["python", "AboutSystem.py"])
 
 # Top Navigation Bar
 nav_bar = ctk.CTkFrame(app, height=50, corner_radius=0)
@@ -352,8 +345,10 @@ def create_alerts_page():
 
     acknowledge_button = ctk.CTkButton(main_content_frame, text="Acknowledge Alert", command=acknowledge_alert)
     acknowledge_button.pack(pady=10)
+
     # About page 
 def create_about_page():
+    global update_message
     # Clear the main content area before adding new content
     for widget in main_content_frame.winfo_children():
         widget.destroy()
@@ -469,6 +464,12 @@ def create_about_page():
     )
     update_label.pack(anchor="w", pady=(5, 0))
 
+update_message = ctk.StringVar(value="")
+# Function to check for updates
+def check_for_updates():
+    global update_message  # Declare that you're using the global variable
+    update_message.set("You are using the latest version. No updates available.")
+    
     
 # Contact Us Page
 def create_contact_us_page():
