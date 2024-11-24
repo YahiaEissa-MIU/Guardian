@@ -4,11 +4,272 @@ import subprocess
 from tkinter import ttk
 import tkinter as tk
 from tkinter import messagebox  # For feedback messages
+from tkinter import ttk
+from tkinter import messagebox
+
 
 # Initialize the app
 app = ctk.CTk()
 app.geometry("1200x600")
 app.title("Guardian")
+
+
+
+
+#Design 1 Tabbed Layout
+"""def create_system_status_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="System Status", font=("Arial", 20, "bold"))
+    title_label.pack(pady=10)
+
+    # Custom style for notebook tabs
+    style = ttk.Style()
+    style.configure(
+        "TNotebook.Tab",
+        font=("Arial", 14, "bold"),  # Adjust font size and style here
+        padding=[10, 5]  # Add padding for better appearance
+    )
+
+    # Notebook (Tabbed Interface)
+    notebook = ttk.Notebook(main_content_frame)
+    notebook.pack(fill="both", expand=True, padx=20, pady=10)
+
+    # Splunk Status Tab
+    splunk_frame = ctk.CTkFrame(notebook, corner_radius=10)
+    notebook.add(splunk_frame, text="Splunk & SOAR")
+
+    ctk.CTkLabel(splunk_frame, text="Splunk SIEM: Healthy", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(splunk_frame, text="SOAR: Running Playbooks", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(splunk_frame, text="Universal Forwarders: All Connected", font=("Arial", 14)).pack(pady=10)
+
+    # Resource Usage Tab
+    resource_frame = ctk.CTkFrame(notebook, corner_radius=10)
+    notebook.add(resource_frame, text="Resource Usage")
+
+    ctk.CTkLabel(resource_frame, text="CPU Usage: 45%", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(resource_frame, text="Memory Usage: 65%", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(resource_frame, text="Disk Usage: 75%", font=("Arial", 14)).pack(pady=10)
+
+    # Network Activity Tab
+    network_frame = ctk.CTkFrame(notebook, corner_radius=10)
+    notebook.add(network_frame, text="Network Activity")
+
+    ctk.CTkLabel(network_frame, text="Upload Speed: 10 Mbps", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(network_frame, text="Download Speed: 50 Mbps", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(network_frame, text="Potential Bottlenecks: None Detected", font=("Arial", 14)).pack(pady=10)
+
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="System Status", font=("Arial", 20, "bold"))
+    title_label.pack(pady=10)
+
+    # Notebook (Tabbed Interface)
+    notebook = ttk.Notebook(main_content_frame)
+    notebook.pack(fill="both", expand=True, padx=20, pady=10)
+
+    # Splunk Status Tab
+    splunk_frame = ctk.CTkFrame(notebook, corner_radius=10)
+    notebook.add(splunk_frame, text="Splunk & SOAR")
+
+    ctk.CTkLabel(splunk_frame, text="Splunk SIEM: Healthy", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(splunk_frame, text="SOAR: Running Playbooks", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(splunk_frame, text="Universal Forwarders: All Connected", font=("Arial", 14)).pack(pady=10)
+
+    # Resource Usage Tab
+    resource_frame = ctk.CTkFrame(notebook, corner_radius=10)
+    notebook.add(resource_frame, text="Resource Usage")
+
+    ctk.CTkLabel(resource_frame, text="CPU Usage: 45%", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(resource_frame, text="Memory Usage: 65%", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(resource_frame, text="Disk Usage: 75%", font=("Arial", 14)).pack(pady=10)
+
+    # Network Activity Tab
+    network_frame = ctk.CTkFrame(notebook, corner_radius=10)
+    notebook.add(network_frame, text="Network Activity")
+
+    ctk.CTkLabel(network_frame, text="Upload Speed: 10 Mbps", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(network_frame, text="Download Speed: 50 Mbps", font=("Arial", 14)).pack(pady=10)
+    ctk.CTkLabel(network_frame, text="Potential Bottlenecks: None Detected", font=("Arial", 14)).pack(pady=10)"""
+
+#Design 2 Card Layout
+"""def create_system_status_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="System Status", font=("Arial", 20, "bold"))
+    title_label.pack(pady=10)
+
+    # Splunk Status Card
+    splunk_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    splunk_frame.pack(fill="x", padx=20, pady=10)
+    ctk.CTkLabel(splunk_frame, text="Splunk & SOAR Status", font=("Arial", 16, "bold")).pack(anchor="w", padx=10, pady=5)
+    ctk.CTkLabel(splunk_frame, text="Splunk SIEM: Healthy", font=("Arial", 14)).pack(anchor="w", padx=10)
+    ctk.CTkLabel(splunk_frame, text="SOAR: Running Playbooks", font=("Arial", 14)).pack(anchor="w", padx=10)
+    ctk.CTkLabel(splunk_frame, text="Universal Forwarders: All Connected", font=("Arial", 14)).pack(anchor="w", padx=10)
+
+    # Resource Usage Card
+    resource_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    resource_frame.pack(fill="x", padx=20, pady=10)
+    ctk.CTkLabel(resource_frame, text="Resource Usage", font=("Arial", 16, "bold")).pack(anchor="w", padx=10, pady=5)
+    ctk.CTkLabel(resource_frame, text="CPU Usage: 45%", font=("Arial", 14)).pack(anchor="w", padx=10)
+    ctk.CTkLabel(resource_frame, text="Memory Usage: 65%", font=("Arial", 14)).pack(anchor="w", padx=10)
+    ctk.CTkLabel(resource_frame, text="Disk Usage: 75%", font=("Arial", 14)).pack(anchor="w", padx=10)
+
+    # Network Activity Card
+    network_frame = ctk.CTkFrame(main_content_frame, corner_radius=10)
+    network_frame.pack(fill="x", padx=20, pady=10)
+    ctk.CTkLabel(network_frame, text="Network Activity", font=("Arial", 16, "bold")).pack(anchor="w", padx=10, pady=5)
+    ctk.CTkLabel(network_frame, text="Upload Speed: 10 Mbps", font=("Arial", 14)).pack(anchor="w", padx=10)
+    ctk.CTkLabel(network_frame, text="Download Speed: 50 Mbps", font=("Arial", 14)).pack(anchor="w", padx=10)
+    ctk.CTkLabel(network_frame, text="Potential Bottlenecks: None Detected", font=("Arial", 14)).pack(anchor="w", padx=10)
+"""
+
+#Design 3 Interactive Buttons
+"""def create_system_status_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Title
+    title_label = ctk.CTkLabel(main_content_frame, text="System Status", font=("Arial", 20, "bold"))
+    title_label.pack(pady=10)
+
+    # Button to Show Splunk Status
+    def show_splunk_status():
+        messagebox.showinfo("Splunk Status", "Splunk SIEM: Healthy\nSOAR: Running Playbooks\nUniversal Forwarders: All Connected")
+
+    ctk.CTkButton(main_content_frame, text="Check Splunk Status", command=show_splunk_status).pack(pady=10)
+
+    # Button to Show Resource Usage
+    def show_resource_usage():
+        messagebox.showinfo("Resource Usage", "CPU Usage: 45%\nMemory Usage: 65%\nDisk Usage: 75%")
+
+    ctk.CTkButton(main_content_frame, text="Check Resource Usage", command=show_resource_usage).pack(pady=10)
+
+    # Button to Show Network Activity
+    def show_network_activity():
+        messagebox.showinfo("Network Activity", "Upload Speed: 10 Mbps\nDownload Speed: 50 Mbps\nPotential Bottlenecks: None Detected")
+
+    ctk.CTkButton(main_content_frame, text="Check Network Activity", command=show_network_activity).pack(pady=10)
+"""
+
+#Design 4 Dynamic Dashboard Style
+def create_system_status_page():
+    for widget in main_content_frame.winfo_children():
+        widget.destroy()
+
+    # Create a frame to hold the canvas and horizontal scrollbar
+    scrollable_frame_container = ctk.CTkFrame(main_content_frame, corner_radius=0)
+    scrollable_frame_container.pack(fill="both", expand=True)
+
+    # Create a canvas and horizontal scrollbar
+    canvas = tk.Canvas(scrollable_frame_container, bg="gray90", highlightthickness=0)
+    h_scrollbar = ctk.CTkScrollbar(scrollable_frame_container, orientation="horizontal", command=canvas.xview)
+    scrollable_frame = ctk.CTkFrame(canvas, corner_radius=10)
+
+    # Configure canvas for horizontal scrolling
+    def update_scrollregion(event=None):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        canvas.xview_moveto(0)  # Reset horizontal scroll position
+
+    scrollable_frame.bind("<Configure>", update_scrollregion)
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(xscrollcommand=h_scrollbar.set)
+
+    # Pack canvas and horizontal scrollbar
+    canvas.grid(row=0, column=0, sticky="nsew")
+    h_scrollbar.grid(row=1, column=0, sticky="ew")
+
+    # Configure grid weights for resizing
+    scrollable_frame_container.grid_rowconfigure(0, weight=1)
+    scrollable_frame_container.grid_columnconfigure(0, weight=1)
+
+    # Bind horizontal scroll events only
+    def _on_horizontal_scroll(event):
+        canvas.xview_scroll(-1 * (event.delta // 120), "units")
+
+    canvas.bind_all("<Shift-MouseWheel>", _on_horizontal_scroll)  # Horizontal scroll with Shift key
+
+    # Title
+    title_label = ctk.CTkLabel(scrollable_frame, text="System Status", font=("Arial", 24, "bold"))
+    title_label.grid(row=0, column=0, columnspan=3, pady=10)
+
+    # Splunk & SOAR Status (Left Column)
+    splunk_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
+    splunk_frame.grid(row=1, column=0, padx=20, pady=10, sticky="n")
+
+    splunk_title = ctk.CTkLabel(splunk_frame, text="Splunk & SOAR Status", font=("Arial", 18, "bold"))
+    splunk_title.pack(anchor="w", padx=10, pady=5)
+
+    splunk_status = ctk.CTkLabel(splunk_frame, text="Splunk SIEM: ✅ Healthy", font=("Arial", 14), fg_color="green", corner_radius=5, width=200)
+    splunk_status.pack(anchor="w", padx=20, pady=2)
+
+    soar_status = ctk.CTkLabel(splunk_frame, text="SOAR: ⚙️ Running Playbooks", font=("Arial", 14), fg_color="green", corner_radius=5, width=250)
+    soar_status.pack(anchor="w", padx=20, pady=2)
+
+    forwarders_status = ctk.CTkLabel(splunk_frame, text="Universal Forwarders: 🔗 All Connected", font=("Arial", 14), fg_color="green", corner_radius=5, width=300)
+    forwarders_status.pack(anchor="w", padx=20, pady=2)
+
+    # Resource Usage (Center Column)
+    resource_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
+    resource_frame.grid(row=1, column=1, padx=20, pady=10, sticky="n")
+
+    resource_title = ctk.CTkLabel(resource_frame, text="Resource Usage", font=("Arial", 18, "bold"))
+    resource_title.pack(anchor="w", padx=10, pady=5)
+
+    # CPU Usage
+    ctk.CTkLabel(resource_frame, text="CPU Usage", font=("Arial", 14)).pack(anchor="w", padx=20, pady=2)
+    cpu_bar_frame = ctk.CTkFrame(resource_frame)
+    cpu_bar_frame.pack(fill="x", padx=20, pady=2)
+    cpu_bar = ctk.CTkProgressBar(cpu_bar_frame, progress_color="red", height=10)
+    cpu_bar.set(0.45)  # 45%
+    cpu_bar.pack(side="left", fill="x", expand=True)
+    cpu_value = ctk.CTkLabel(cpu_bar_frame, text="45%", font=("Arial", 14))
+    cpu_value.pack(side="left", padx=10)
+
+    # Memory Usage
+    ctk.CTkLabel(resource_frame, text="Memory Usage", font=("Arial", 14)).pack(anchor="w", padx=20, pady=2)
+    memory_bar_frame = ctk.CTkFrame(resource_frame)
+    memory_bar_frame.pack(fill="x", padx=20, pady=2)
+    memory_bar = ctk.CTkProgressBar(memory_bar_frame, progress_color="orange", height=10)
+    memory_bar.set(0.65)  # 65%
+    memory_bar.pack(side="left", fill="x", expand=True)
+    memory_value = ctk.CTkLabel(memory_bar_frame, text="65%", font=("Arial", 14))
+    memory_value.pack(side="left", padx=10)
+
+    # Disk Usage
+    ctk.CTkLabel(resource_frame, text="Disk Usage", font=("Arial", 14)).pack(anchor="w", padx=20, pady=2)
+    disk_bar_frame = ctk.CTkFrame(resource_frame)
+    disk_bar_frame.pack(fill="x", padx=20, pady=2)
+    disk_bar = ctk.CTkProgressBar(disk_bar_frame, progress_color="blue", height=10)
+    disk_bar.set(0.75)  # 75%
+    disk_bar.pack(side="left", fill="x", expand=True)
+    disk_value = ctk.CTkLabel(disk_bar_frame, text="75%", font=("Arial", 14))
+    disk_value.pack(side="left", padx=10)
+
+    # Network Activity (Right Column)
+    network_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
+    network_frame.grid(row=1, column=2, padx=20, pady=10, sticky="n")
+
+    network_title = ctk.CTkLabel(network_frame, text="Network Activity", font=("Arial", 18, "bold"))
+    network_title.pack(anchor="w", padx=10, pady=5)
+
+    upload_status = ctk.CTkLabel(network_frame, text="Upload Speed: 📤 10 Mbps", font=("Arial", 14), fg_color="blue", corner_radius=5, width=200)
+    upload_status.pack(anchor="w", padx=20, pady=2)
+
+    download_status = ctk.CTkLabel(network_frame, text="Download Speed: 📥 50 Mbps", font=("Arial", 14), fg_color="blue", corner_radius=5, width=220)
+    download_status.pack(anchor="w", padx=20, pady=2)
+
+    bottleneck_status = ctk.CTkLabel(network_frame, text="Potential Bottlenecks: ❌ None Detected", font=("Arial", 14), fg_color="green", corner_radius=5, width=300)
+    bottleneck_status.pack(anchor="w", padx=20, pady=2)
+
+
+
 
 # Sidebar visibility flag
 sidebar_visible = True
@@ -525,7 +786,7 @@ incident_button = ctk.CTkButton(
 incident_button.pack(pady=10, padx=10, fill="x")
 
 system_status_button = ctk.CTkButton(sidebar_frame, text="System Status",
-                                     command=lambda: update_main_content("Status..."))
+                                     command=create_system_status_page)
 system_status_button.pack(pady=10, padx=10, fill="x")
 
 contact_button = ctk.CTkButton(sidebar_frame, text="Contact Us", command=create_contact_us_page)
