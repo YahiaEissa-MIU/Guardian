@@ -1,7 +1,5 @@
-import tkinter as tk
-from tkinter import PhotoImage
-from PIL import Image, ImageTk
-import subprocess  # Used for opening the alert page (alert.py)
+import customtkinter as ctk
+import subprocess  # For launching other scripts
 
 # Function to handle version updates button (placeholder for future functionality)
 def check_for_updates():
@@ -15,87 +13,84 @@ def show_frame(frame):
 def open_alert_page():
     subprocess.run(["python", "alerts.py"])
 
-# Tkinter window setup
-root = tk.Tk()
-root.title("Guardian - Ransomware Detection System")
-root.geometry("900x600")
-root.configure(bg="white")
+# Function to open the dashboard page (app.py)
+def open_dashboard_page():
+    subprocess.run(["python", "app.py"])
 
+# Function to open the About System page (AboutSystem.py)
+def open_about_page():
+    subprocess.run(["python", "AboutSystem.py"])
 
-# Function to resize image icons (updated for newer Pillow versions)
-def resize_icon(image_path, size=(40, 40)):
-    image = Image.open(image_path)
-    image = image.resize(size, Image.Resampling.LANCZOS)  # Replaced ANTIALIAS with LANCZOS
-    return ImageTk.PhotoImage(image)
+# Initialize the app
+app = ctk.CTk()
+app.geometry("1200x700")
+app.title("Guardian")
 
+# Sidebar visibility toggle
+sidebar_visible = True
 
-# Create resized navigation icons
-alert_icon = resize_icon("alert.png")  # Replace with actual icon path
-about_icon = resize_icon("about.png")  # Replace with actual icon path
+def toggle_sidebar():
+    global sidebar_visible
+    if sidebar_visible:
+        sidebar_frame.grid_forget()  # Hide sidebar
+        toggle_button.configure(text="☰")  # Show menu icon
+    else:
+        sidebar_frame.grid(row=1, column=0, sticky="ns")  # Show sidebar
+        toggle_button.configure(text="X")  # Show close icon
+    sidebar_visible = not sidebar_visible
 
-# Vertical Navigation Bar
-nav_bar = tk.Frame(root, bg="red", width=150)
-nav_bar.pack(side=tk.LEFT, fill=tk.Y)
+# Top Navigation Bar
+nav_bar = ctk.CTkFrame(app, height=50, corner_radius=0)
+nav_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
 
-# Navigation Buttons
+toggle_button = ctk.CTkButton(nav_bar, text="X", command=toggle_sidebar, width=50)
+toggle_button.pack(side="left", padx=10, pady=5)
 
-alert_button = tk.Button(
-    nav_bar,
-    text="Alerts",
-    image=alert_icon,
-    compound="top",
-    bg="red",
-    fg="white",
-    font=("Arial", 12, "bold"),
-    command=open_alert_page,  # Link to alert.py page
-    relief=tk.FLAT
-)
-alert_button.pack(pady=20)
+nav_title = ctk.CTkLabel(nav_bar, text="Guardian", font=("Arial", 18))
+nav_title.pack(side="left", padx=20)
 
-about_button = tk.Button(
-    nav_bar,
-    text="About",
-    image=about_icon,
-    compound="top",
-    bg="red",
-    fg="white",
-    font=("Arial", 12, "bold"),
-    command=lambda: show_frame(about_page),
-    relief=tk.FLAT
-)
-about_button.pack(pady=20)
+# Sidebar Frame
+sidebar_frame = ctk.CTkFrame(app, width=200, corner_radius=0)
+sidebar_frame.grid(row=1, column=0, sticky="ns")
 
+# Sidebar Buttons
+buttons = [
+    {"text": "Dashboard", "command": open_dashboard_page},
+    {"text": "Alerts", "command": open_alert_page},
+    {"text": "Incident Response History", "command": lambda: update_main_content("Incident Response Content")},
+    {"text": "System Status", "command": lambda: update_main_content("Status...")},
+    {"text": "Contact Us", "command": lambda: update_main_content("Contact Us")},
+    {"text": "About System", "command": open_about_page},
+    {"text": "Settings", "command": lambda: update_main_content("Settings Content")},
+]
+for button in buttons:
+    ctk.CTkButton(sidebar_frame, text=button["text"], command=button["command"], width=150).pack(pady=10, padx=10, fill="x")
 
+# Main Content Frame
+main_content_frame = ctk.CTkFrame(app, corner_radius=10)
+main_content_frame.grid(row=1, column=1, sticky="nsew", padx=20, pady=20)
 
-# Container for pages
-main_frame = tk.Frame(root, bg="white")
-main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-# Pages
-alert_page = tk.Frame(main_frame, bg="white")
-about_page = tk.Frame(main_frame, bg="white")
+# Pages within the main content frame
+alert_page = ctk.CTkFrame(main_content_frame, corner_radius=10)
+about_page = ctk.CTkFrame(main_content_frame, corner_radius=10)
 
 for frame in (alert_page, about_page):
     frame.grid(row=0, column=0, sticky="nsew")
 
 # -------------------- About Page --------------------
-about_header = tk.Label(
-    about_page, text="About Guardian", bg="red", fg="white", font=("Arial", 20, "bold")
+about_header = ctk.CTkLabel(
+    about_page, text="About Guardian", font=("Arial", 20, "bold")
 )
-about_header.pack(fill=tk.X, pady=5)
+about_header.pack(fill="x", pady=5)
 
-# Content Frame for About Page
-content_frame = tk.Frame(about_page, bg="white", padx=20, pady=20)
-content_frame.pack(fill=tk.BOTH, expand=True)
+content_frame = ctk.CTkFrame(about_page)
+content_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
 # Overview Section
-overview_label = tk.Label(
+overview_label = ctk.CTkLabel(
     content_frame,
     text="Guardian: Your Ransomware Detection and Response Solution",
-    bg="white",
-    fg="black",
     font=("Arial", 14, "bold"),
-    anchor="w",
 )
 overview_label.pack(anchor="w", pady=(0, 10))
 
@@ -105,11 +100,9 @@ overview_text = (
     "it provides automated responses to neutralize potential risks, ensuring "
     "the safety and integrity of your data."
 )
-overview_box = tk.Label(
+overview_box = ctk.CTkLabel(
     content_frame,
     text=overview_text,
-    bg="white",
-    fg="black",
     font=("Arial", 12),
     wraplength=550,
     justify="left",
@@ -117,8 +110,8 @@ overview_box = tk.Label(
 overview_box.pack(anchor="w", pady=(0, 20))
 
 # Credits Section
-credits_label = tk.Label(
-    content_frame, text="Developers & Contributors:", bg="white", fg="black", font=("Arial", 14, "bold"), anchor="w"
+credits_label = ctk.CTkLabel(
+    content_frame, text="Developers & Contributors:", font=("Arial", 14, "bold")
 )
 credits_label.pack(anchor="w", pady=(10, 5))
 
@@ -127,21 +120,16 @@ credits_text = (
     "- Contributor: Nada Abdelrahman\n"
     "- Contributor: Donya Hany\n"
     "- Contributor: Abdelrahman Walid\n"
-    "- Contributor: Ali Ahmed \n"
+    "- Contributor: Ali Ahmed\n"
 )
-credits_box = tk.Label(
-    content_frame,
-    text=credits_text,
-    bg="white",
-    fg="black",
-    font=("Arial", 12),
-    justify="left",
+credits_box = ctk.CTkLabel(
+    content_frame, text=credits_text, font=("Arial", 12), justify="left"
 )
 credits_box.pack(anchor="w", pady=(0, 20))
 
 # Version Section
-version_label = tk.Label(
-    content_frame, text="Version Information:", bg="white", fg="black", font=("Arial", 14, "bold"), anchor="w"
+version_label = ctk.CTkLabel(
+    content_frame, text="Version Information:", font=("Arial", 14, "bold")
 )
 version_label.pack(anchor="w", pady=(10, 5))
 
@@ -149,43 +137,32 @@ version_text = (
     "Guardian Version: 1.0.0\n"
     "Last Updated: November 22, 2024"
 )
-version_box = tk.Label(
-    content_frame,
-    text=version_text,
-    bg="white",
-    fg="black",
-    font=("Arial", 12),
-    justify="left",
+version_box = ctk.CTkLabel(
+    content_frame, text=version_text, font=("Arial", 12), justify="left"
 )
 version_box.pack(anchor="w", pady=(0, 10))
 
 # Check for Updates Button
-update_message = tk.StringVar(value="")
-update_button = tk.Button(
-    content_frame,
-    text="Check for Updates",
-    bg="red",
-    fg="white",
-    font=("Arial", 12),
-    command=check_for_updates,
+update_message = ctk.StringVar(value="")
+
+update_button = ctk.CTkButton(
+    content_frame, text="Check for Updates", command=check_for_updates
 )
 update_button.pack(anchor="w", pady=5)
 
-update_label = tk.Label(
-    content_frame, textvariable=update_message, bg="white", fg="black", font=("Arial", 12), anchor="w"
+update_label = ctk.CTkLabel(
+    content_frame, textvariable=update_message, font=("Arial", 12)
 )
 update_label.pack(anchor="w", pady=(5, 0))
 
 # Footer Frame
-footer_frame = tk.Frame(root, bg="red")
-footer_frame.pack(fill=tk.X, side=tk.BOTTOM)
+footer_frame = ctk.CTkFrame(app, height=30, corner_radius=0)
+footer_frame.grid(row=2, column=0, columnspan=2, sticky="ew")
 
-footer_label = tk.Label(
-    footer_frame, text="© 2024 Guardian Team. All rights reserved.", bg="red", fg="white", font=("Arial", 10)
+footer_label = ctk.CTkLabel(
+    footer_frame, text="© 2024 Guardian Team. All rights reserved.", font=("Arial", 10)
 )
 footer_label.pack(pady=5)
 
-
-
-# Run the application
-root.mainloop()
+# Run the app
+app.mainloop()
