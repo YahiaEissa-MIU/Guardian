@@ -10,14 +10,8 @@ class SettingsController:
         self.auto_backup_var = ctk.BooleanVar(value=True)
         self.frequency_var = ctk.StringVar(value="Daily")
 
-    def toggle_auto_response(self):
-        print(f"Auto-Response Mode: {'Enabled' if self.auto_response_var.get() else 'Disabled'}")
-
     def toggle_notifications(self):
         print(f"Notifications: {'Enabled' if self.notify_var.get() else 'Disabled'}")
-
-    def toggle_real_time(self):
-        print(f"Real-Time Protection: {'Enabled' if self.real_time_var.get() else 'Disabled'}")
 
     def toggle_auto_backup(self):
         print(f"Automatic Backup: {'Enabled' if self.auto_backup_var.get() else 'Disabled'}")

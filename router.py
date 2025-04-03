@@ -1,6 +1,7 @@
 from controllers.system_status_controller import SystemStatusController
 from models.system_status_model import SystemStatusModel
 from views.dashboard_view import DashboardView
+from controllers.dashboard_controller import DashboardController
 from views.system_status_view import SystemStatusView
 from views.incident_history_view import IncidentHistoryView
 from models.incident_history_model import IncidentHistoryModel
@@ -41,7 +42,10 @@ class Router:
 
         if name not in self.views:
             if name == "dashboard":
-                self.register(name, DashboardView)
+                view = DashboardView(self.root.main_content_frame)
+                controller = DashboardController(view)  # No model needed
+                view.set_controller(controller)
+                self.views[name] = view
             elif name == "system_status":
                 model = self.system_status_model
                 view = SystemStatusView(self.root.main_content_frame, None)
@@ -59,9 +63,8 @@ class Router:
                 view = SettingsView(self.root.main_content_frame, controller)
                 self.views[name] = view
             elif name == "alerts":
-                model = self.alert_model
-                view = AlertsView(self.root.main_content_frame, None)
-                controller = AlertsController(model, view)
+                view = AlertsView(self.root.main_content_frame)
+                controller = AlertsController(view)  # Remove model, just like dashboard
                 view.set_controller(controller)
                 self.views[name] = view
             elif name == "about_system":

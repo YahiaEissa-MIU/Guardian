@@ -24,32 +24,12 @@ class SettingsView(ctk.CTkFrame):
         general_label = ctk.CTkLabel(general_frame, text="General Settings", font=("Arial", 16, "bold"))
         general_label.pack(anchor="w", pady=10, padx=10)
 
-        auto_response_toggle = ctk.CTkSwitch(
-            general_frame, text="Automatically detect and respond to ransomware threats.",
-            variable=self.controller.auto_response_var,
-            command=self.controller.toggle_auto_response
-        )
-        auto_response_toggle.pack(anchor="w", padx=20, pady=5)
-
         notify_toggle = ctk.CTkSwitch(
             general_frame, text="Notify me when threats are detected or resolved.",
             variable=self.controller.notify_var,
             command=self.controller.toggle_notifications
         )
         notify_toggle.pack(anchor="w", padx=20, pady=5)
-
-        security_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
-        security_frame.pack(pady=10, padx=20, fill="x")
-
-        security_label = ctk.CTkLabel(security_frame, text="Security Settings", font=("Arial", 16, "bold"))
-        security_label.pack(anchor="w", pady=10, padx=10)
-
-        real_time_toggle = ctk.CTkSwitch(
-            security_frame, text="Continuously monitor for ransomware activities.",
-            variable=self.controller.real_time_var,
-            command=self.controller.toggle_real_time
-        )
-        real_time_toggle.pack(anchor="w", padx=20, pady=5)
 
         backup_frame = ctk.CTkFrame(scrollable_frame, corner_radius=10)
         backup_frame.pack(pady=10, padx=20, fill="x")

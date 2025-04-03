@@ -1,8 +1,6 @@
 import os
 import csv
 from datetime import datetime
-import win32print
-import win32ui
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import subprocess
