@@ -1,22 +1,21 @@
-# alerts_controller.py
+# controllers/alerts_controller.py
 import requests
 import urllib3
 from datetime import datetime
 import logging
+from models.wazuh_config import WazuhConfig
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Shared storage for acknowledged alerts
+acknowledged_alerts_storage = set()
 
 
 class AlertsController:
     def __init__(self, view=None):
         print("Initializing AlertsController...")
         self.view = view
-        self.wazuh_base_url = "https://192.168.1.5:55000"
-        self.wazuh_auth = {
-            'user': 'wazuh-wui',
-            'password': '1p.xwBLv9W*VwXGmwiYWn**Z9VwNLSn8'
-        }
-        self.verify_ssl = False
+        self.wazuh_config = WazuhConfig.load_from_file()
         self._token = None
         self._token_timestamp = None
         self.session = requests.Session()
@@ -25,27 +24,48 @@ class AlertsController:
         self.acknowledged_alerts = set()
         self.windows_agent_id = None
 
-        # Ransomware-specific patterns
-        self.ransomware_extensions = [
-            '.encrypted', '.crypto', '.locked', '.crypted', '.crypt',
-            '.wallet', '.ransom', '.write', '.wcry', '.wncry', '.wnry',
-            '.tesla', '.locky', '.zepto', '.cerber', '.sage'
-        ]
-
-        self.suspicious_paths = [
-            'desktop',
-            'documents',
-            'downloads',
-            'pictures',
-            'appdata\\local',
-            'appdata\\roaming',
-            'program files',
-            'windows\\system32'
-        ]
+        # Load previously acknowledged alerts if they exist
+        try:
+            with open('acknowledged_alerts.txt', 'r') as f:
+                for line in f:
+                    acknowledged_alerts_storage.add(line.strip())
+            print(f"Loaded {len(acknowledged_alerts_storage)} acknowledged alerts")
+        except FileNotFoundError:
+            print("No previously acknowledged alerts found")
+            pass
 
         # Initialize with system checks
         self.verify_api_configuration()
         self.get_windows_agent_id()
+
+    def on_config_change(self, new_config: WazuhConfig):
+        """Observer method for configuration changes"""
+        print(f"AlertsController: Received new configuration. URL: {new_config.url}")
+        try:
+            # Update configuration
+            self.wazuh_config = new_config
+
+            # Reset connection-related attributes
+            self._token = None
+            self._token_timestamp = None
+
+            # Close existing session and create new one
+            self.session.close()
+            self.session = requests.Session()
+            self.session.verify = False
+            self.session.timeout = 10
+
+            # Reinitialize connection
+            print("AlertsController: Reinitializing connection with new configuration...")
+            success = self.verify_api_configuration()
+            if success:
+                print("AlertsController: Successfully updated configuration")
+                self.get_windows_agent_id()
+            else:
+                print("AlertsController: Failed to verify new configuration")
+
+        except Exception as e:
+            print(f"AlertsController: Error updating configuration: {e}")
 
     def verify_api_configuration(self):
         """Verify Wazuh API configuration"""
@@ -54,11 +74,13 @@ class AlertsController:
             if self.get_wazuh_token():
                 response = self.fetch_data('manager/configuration')
                 if response and 'data' in response:
-                    print("API Configuration available")
+                    print("API Configuration verified successfully")
                     return True
+                print("API Configuration verification failed: Invalid response")
+                return False
         except Exception as e:
             print(f"Error verifying API configuration: {e}")
-        return False
+            return False
 
     def get_wazuh_token(self):
         """Get authentication token from Wazuh"""
@@ -70,9 +92,13 @@ class AlertsController:
                     return self._token
 
             print("Requesting new Wazuh token...")
+            base_url = f"https://{self.wazuh_config.url}"
+            if not base_url.endswith(':55000'):
+                base_url = f"{base_url}:55000"
+
             response = self.session.post(
-                f"{self.wazuh_base_url}/security/user/authenticate",
-                auth=(self.wazuh_auth['user'], self.wazuh_auth['password']),
+                f"{base_url}/security/user/authenticate",
+                auth=(self.wazuh_config.username, self.wazuh_config.password),
                 verify=False
             )
 
@@ -83,7 +109,7 @@ class AlertsController:
                 print("Successfully obtained token")
                 return self._token
 
-            print(f"Failed to get token. Response: {response.text}")
+            print(f"Failed to get token. Status: {response.status_code}, Response: {response.text}")
             return None
         except Exception as e:
             print(f"Error getting token: {e}")
@@ -121,8 +147,12 @@ class AlertsController:
             print(f"\nFetching data from endpoint: {endpoint}")
             print(f"Parameters: {params}")
 
+            base_url = f"https://{self.wazuh_config.url}"
+            if not base_url.endswith(':55000'):
+                base_url = f"{base_url}:55000"
+
             response = self.session.get(
-                f"{self.wazuh_base_url}/{endpoint}",
+                f"{base_url}/{endpoint}",
                 params=params
             )
 
@@ -169,13 +199,13 @@ class AlertsController:
                     try:
                         file_path = item.get('file', '').lower()
                         event_type = item.get('type', '').lower()
-
-                        # Convert timestamp string to datetime object
                         timestamp_str = item.get('date', '')
-                        try:
-                            timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                        except (ValueError, AttributeError):
-                            timestamp = datetime.now()
+
+                        # Check if alert is already acknowledged
+                        alert_id = f"{timestamp_str}_{file_path}"
+                        if alert_id in acknowledged_alerts_storage:
+                            print(f"Skipping acknowledged alert: {alert_id}")
+                            continue
 
                         # Check for ransomware indicators
                         is_suspicious = False
@@ -183,17 +213,11 @@ class AlertsController:
                         alert_type = "File Change"
 
                         # Check suspicious paths
-                        if any(path in file_path for path in self.suspicious_paths):
+                        if any(path in file_path for path in self.wazuh_config.suspicious_paths):
                             is_suspicious = True
                             severity = "medium"
 
-                        # Check ransomware extensions
-                        if any(ext in file_path for ext in self.ransomware_extensions):
-                            is_suspicious = True
-                            severity = "high"
-                            alert_type = "Potential Ransomware Activity"
-
-                        # Check mass file operations
+                        # Check for modifications or deletions
                         if event_type in ['modified', 'deleted']:
                             is_suspicious = True
                             severity = "high"
@@ -205,14 +229,12 @@ class AlertsController:
                             alert_type = "Ransomware Note Detected"
 
                         if is_suspicious:
-                            alert_id = f"{timestamp_str}_{file_path}_{event_type}"
-                            if alert_id not in self.acknowledged_alerts:
-                                all_alerts.append({
-                                    "timestamp": timestamp_str,
-                                    "actions": severity,
-                                    "type": alert_type,
-                                    "file": file_path
-                                })
+                            all_alerts.append({
+                                "timestamp": timestamp_str,
+                                "actions": severity,
+                                "type": alert_type,
+                                "file": file_path
+                            })
 
                     except Exception as e:
                         print(f"Error processing alert item: {e}")
@@ -238,8 +260,19 @@ class AlertsController:
             if selected_item:
                 try:
                     values = self.view.tree.item(selected_item)['values']
-                    alert_id = f"{values[0]}_{values[3]}"
+                    alert_id = f"{values[0]}_{values[3]}"  # timestamp_filepath
                     self.acknowledged_alerts.add(alert_id)
+                    acknowledged_alerts_storage.add(alert_id)
+                    print(f"Alert acknowledged: {alert_id}")
+                    print(f"Total acknowledged alerts: {len(acknowledged_alerts_storage)}")
+
+                    # Save to file
+                    try:
+                        with open('acknowledged_alerts.txt', 'a') as f:
+                            f.write(f"{alert_id}\n")
+                    except Exception as e:
+                        print(f"Error saving acknowledged alert: {e}")
+
                     self.view.tree.delete(selected_item)
                     self.view.details_text.configure(state="normal")
                     self.view.details_text.delete("1.0", "end")
@@ -247,20 +280,3 @@ class AlertsController:
                     self.view.details_text.configure(state="disabled")
                 except Exception as e:
                     print(f"Error acknowledging alert: {e}")
-
-    def _get_ransomware_indicators(self, file_path, event_type):
-        """Analyze and return specific ransomware indicators"""
-        indicators = []
-
-        if event_type == 'modified':
-            indicators.append("File content modification detected")
-        if event_type == 'deleted':
-            indicators.append("File deletion detected")
-        if any(ext in file_path for ext in self.ransomware_extensions):
-            indicators.append("Known ransomware file extension detected")
-        if 'readme' in file_path.lower():
-            indicators.append("Potential ransom note detected")
-        if 'windows\\system32' in file_path.lower():
-            indicators.append("System file manipulation detected")
-
-        return indicators
