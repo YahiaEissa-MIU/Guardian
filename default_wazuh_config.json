@@ -1,0 +1,11 @@
+{
+    "url": "192.168.1.5:55000",
+    "username": "wazuh-wui",
+    "password": "1p.xwBLv9W*VwXGmwiYWn**Z9VwNLSn8",
+    "suspicious_paths": [
+        "system32",
+        "program files"
+    ],
+    "last_modified": "2025-04-04T05:15:37.847722",
+    "is_default": true
+}

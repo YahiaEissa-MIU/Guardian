@@ -1,0 +1,6 @@
+2025-04-01T16:03:08+00:00_c:\windows\system32\drivers\etc\hosts
+2025-04-01T16:03:08+00:00_c:\windows\system32\drivers\etc\hosts.backup
+2025-04-01T16:03:08+00:00_c:\windows\system32\drivers\etc\lmhosts.sam
+2025-04-01T16:03:08+00:00_c:\windows\system32\drivers\etc\networks
+2025-04-01T16:03:08+00:00_c:\windows\system32\drivers\etc\hosts.rollback
+2025-04-01T16:03:08+00:00_c:\windows\system32\drivers\etc\protocol
