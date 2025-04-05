@@ -21,8 +21,14 @@ class Router:
         self.system_status_model = SystemStatusModel()
         self.root = root
         self.views = {}
-        self.alert_model = AlertModel()  # Create an instance of AlertModel
+        self.alert_model = AlertModel()
         self.incident_history_model = IncidentHistoryModel()
+
+        # Initialize the settings controller first as it's needed for configuration
+        self.settings_controller = SettingsController()
+        # Controllers will be initialized when their views are created
+        self.alerts_controller = None
+        self.dashboard_controller = None
 
     def register(self, name, view_class, controller=None):
         """Register a view by name if not already registered."""
@@ -32,48 +38,59 @@ class Router:
             else:
                 self.views[name] = view_class(self.root.main_content_frame)
 
-            # Use grid() instead of place()
             self.views[name].grid(row=0, column=0, sticky="nsew")
 
     def show(self, name):
         """Show the requested view and hide others."""
         for view in self.views.values():
-            view.grid_forget()  # Hide all views
+            view.grid_forget()
 
         if name not in self.views:
             if name == "dashboard":
                 view = DashboardView(self.root.main_content_frame)
-                controller = DashboardController(view)  # No model needed
-                view.set_controller(controller)
+                self.dashboard_controller = DashboardController(view)
+                view.set_controller(self.dashboard_controller)
                 self.views[name] = view
+                # Add observer for settings changes
+                self.settings_controller.add_observer(self.dashboard_controller.on_config_change)
+
             elif name == "system_status":
                 model = self.system_status_model
                 view = SystemStatusView(self.root.main_content_frame, None)
                 controller = SystemStatusController(model, view)
                 view.set_controller(controller)
                 self.views[name] = view
+
             elif name == "incident_history":
                 model = self.incident_history_model
                 view = IncidentHistoryView(self.root.main_content_frame, None)
                 controller = IncidentHistoryController(model, view)
                 view.set_controller(controller)
                 self.views[name] = view
+
             elif name == "settings":
-                controller = SettingsController()
-                view = SettingsView(self.root.main_content_frame, controller)
+                view = SettingsView(self.root.main_content_frame, self.settings_controller)
                 self.views[name] = view
+
             elif name == "alerts":
                 view = AlertsView(self.root.main_content_frame)
-                controller = AlertsController(view)  # Remove model, just like dashboard
-                view.set_controller(controller)
+                self.alerts_controller = AlertsController(view)
+                view.set_controller(self.alerts_controller)
                 self.views[name] = view
+                # Add observer for settings changes
+                self.settings_controller.add_observer(self.alerts_controller.on_config_change)
+
             elif name == "about_system":
                 self.register(name, AboutSystemView)
+
             elif name == "contact_us":
                 view = ContactView(self.root.main_content_frame)
                 controller = ContactController(view)
                 view.set_controller(controller)
                 self.views[name] = view
 
-        # Instead of `place`, use `grid()`
         self.views[name].grid(row=0, column=0, sticky="nsew")
+
+        # Update views that need refreshing when shown
+        if name == "dashboard" and self.dashboard_controller:
+            self.dashboard_controller.update_dashboard()
