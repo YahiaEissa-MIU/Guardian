@@ -1,6 +1,11 @@
+from tkinter import messagebox
+
 import customtkinter as ctk
 import psutil
+import os
+import sys
 from router import Router
+from utils.config_manager import ConfigManager
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -9,7 +14,7 @@ ctk.set_default_color_theme("blue")
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-
+        config_manager = ConfigManager()
         self.title("Guardian")
         self.geometry("1200x600")
         self.grid_rowconfigure(1, weight=1)
@@ -141,5 +146,31 @@ class App(ctk.CTk):
         self.sidebar_visible = not self.sidebar_visible
 
 
-app = App()
-app.mainloop()
+def check_admin():
+    try:
+        import ctypes
+        import sys
+
+        if sys.platform == 'win32':
+            print("Checking administrator privileges...")
+            if ctypes.windll.shell32.IsUserAnAdmin():
+                print("Running with administrator privileges")
+                return True
+            else:
+                print("Not running with administrator privileges")
+                if not ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None,
+                                                           1):
+                    print("Failed to restart with administrator privileges")
+                    return False
+                sys.exit(0)
+    except Exception as e:
+        print(f"Error checking admin privileges: {e}")
+        return False
+
+
+if __name__ == "__main__":
+    if not check_admin():
+        messagebox.showerror("Error", "Administrator privileges required!")
+        sys.exit(1)
+    app = App()
+    app.mainloop()
