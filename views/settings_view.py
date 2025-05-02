@@ -3,21 +3,24 @@ from typing import List
 
 
 class SettingsView(ctk.CTkFrame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent):
         super().__init__(parent)
         print("Initializing SettingsView...")
         self.router = parent
-        self.controller = controller
-        self.controller.set_view(self)
+        self.controller = None
         # Define common styles
         self.SECTION_FONT = ("Helvetica", 18, "bold")
         self.SUBTITLE_FONT = ("Helvetica", 14)
         self.BUTTON_FONT = ("Helvetica", 12)
         self.SECTION_PADDING = (20, 15)
         self.WIDGET_PADDING = (0, 8)
-
-        self.create_settings_page()
         print("SettingsView initialized")
+
+    def set_controller(self, controller):
+        """Sets the controller and initializes the view"""
+        self.controller = controller
+        self.controller.set_view(self)
+        self.create_settings_page()
 
     def get_agent_ip(self):
         """Get the IP address from the agent IP entry field"""
@@ -241,12 +244,9 @@ class SettingsView(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
         button_frame.pack(fill="x", pady=(10, 0))
 
-        # Left side buttons
-        left_buttons_frame = ctk.CTkFrame(button_frame, fg_color="transparent")
-        left_buttons_frame.pack(side="left")
-
+        # Test and Save buttons
         ctk.CTkButton(
-            left_buttons_frame,
+            button_frame,
             text="Test Connection",
             command=self.controller.test_connection,
             font=self.BUTTON_FONT,
@@ -255,25 +255,13 @@ class SettingsView(ctk.CTkFrame):
         ).pack(side="left", padx=(0, 10))
 
         ctk.CTkButton(
-            left_buttons_frame,
+            button_frame,
             text="Save Settings",
             command=self.controller.save_settings,
             font=self.BUTTON_FONT,
             height=32,
             width=150
         ).pack(side="left")
-
-        # Reset button on the right
-        ctk.CTkButton(
-            button_frame,
-            text="Reset Wazuh Settings",
-            command=self.controller.reset_wazuh_to_default,
-            font=self.BUTTON_FONT,
-            height=32,
-            fg_color="transparent",
-            border_width=2,
-            text_color=("gray10", "gray90")
-        ).pack(side="right")
 
     def create_agent_settings(self, parent):
         section_frame = self.create_section_frame(parent, "Agent Settings")
@@ -333,7 +321,8 @@ class SettingsView(ctk.CTkFrame):
 
         # Create input fields with labels
         fields = [
-            ("Server URL:", self.controller.shuffle_url, "Enter Shuffle server URL (e.g., http://192.168.1.5:3001)", ""),
+            (
+            "Server URL:", self.controller.shuffle_url, "Enter Shuffle server URL (e.g., http://192.168.1.5:3001)", ""),
             ("API Key:", self.controller.shuffle_api_key, "Enter Shuffle API key", ""),
             ("Workflow Name:", self.controller.shuffle_workflow, "Enter workflow name (e.g., test)", "")
         ]
@@ -364,12 +353,9 @@ class SettingsView(ctk.CTkFrame):
         button_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
         button_frame.pack(fill="x", pady=(10, 0))
 
-        # Left side buttons
-        left_buttons_frame = ctk.CTkFrame(button_frame, fg_color="transparent")
-        left_buttons_frame.pack(side="left")
-
+        # Test and Save buttons
         ctk.CTkButton(
-            left_buttons_frame,
+            button_frame,
             text="Test Shuffle Connection",
             command=self.controller.test_shuffle_connection,
             font=self.BUTTON_FONT,
@@ -378,25 +364,13 @@ class SettingsView(ctk.CTkFrame):
         ).pack(side="left", padx=(0, 10))
 
         ctk.CTkButton(
-            left_buttons_frame,
+            button_frame,
             text="Save Shuffle Settings",
             command=self.controller.save_shuffle_settings,
             font=self.BUTTON_FONT,
             height=32,
             width=150
         ).pack(side="left")
-
-        # Reset button on the right
-        ctk.CTkButton(
-            button_frame,
-            text="Reset Shuffle Settings",
-            command=self.controller.reset_shuffle_to_default,
-            font=self.BUTTON_FONT,
-            height=32,
-            fg_color="transparent",
-            border_width=2,
-            text_color=("gray10", "gray90")
-        ).pack(side="right")
 
     def create_section_frame(self, parent, title):
         frame = ctk.CTkFrame(parent, corner_radius=10)
