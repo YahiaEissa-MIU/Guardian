@@ -1,9 +1,11 @@
 class ContactController:
-    def __init__(self, view):
+    def __init__(self):
+        self.view = None
+
+    def set_view(self, view):
         self.view = view
 
     def handle_feedback(self, feedback):
-        """Process feedback and return message tuple"""
         feedback = feedback.strip()
         if not feedback:
             return ("Empty Message",
