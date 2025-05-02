@@ -1,96 +1,180 @@
-from controllers.system_status_controller import SystemStatusController
-from models.system_status_model import SystemStatusModel
-from views.dashboard_view import DashboardView
-from controllers.dashboard_controller import DashboardController
-from views.system_status_view import SystemStatusView
-from views.incident_history_view import IncidentHistoryView
-from models.incident_history_model import IncidentHistoryModel
-from controllers.incident_history_controller import IncidentHistoryController
-from views.settings_view import SettingsView
-from controllers.settings_controller import SettingsController
-from views.alerts_view import AlertsView
-from models.alert_model import AlertModel
-from controllers.alerts_controller import AlertsController
-from views.about_system_view import AboutSystemView
-from views.contact_us_view import ContactView
-from controllers.contact_controller import ContactController
+from typing import Dict, Optional, Type
+import logging
+from dataclasses import dataclass
+
+from controllers import (
+    SystemStatusController, DashboardController, IncidentHistoryController,
+    SettingsController, AlertsController, ContactController
+)
+from models import SystemStatusModel, IncidentHistoryModel, WazuhConfig
+from utils.alert_manager import AlertManager
+from views import (
+    DashboardView, SystemStatusView, IncidentHistoryView, SettingsView,
+    AlertsView, ContactView, AboutSystemView
+)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ViewConfiguration:
+    """Configuration for a view including its dependencies"""
+    view_class: Type
+    controller_class: Optional[Type] = None
+    model_class: Optional[Type] = None
+    needs_refresh: bool = False
+    observes_settings: bool = False
 
 
 class Router:
+    """Router for managing application views and their dependencies"""
+
+    # Define view configurations
+    VIEW_CONFIGS = {
+        "dashboard": ViewConfiguration(
+            view_class=DashboardView,
+            controller_class=DashboardController,
+            needs_refresh=True,
+            observes_settings=True
+        ),
+        "system_status": ViewConfiguration(
+            view_class=SystemStatusView,
+            controller_class=SystemStatusController,
+            model_class=SystemStatusModel
+        ),
+        "incident_history": ViewConfiguration(
+            view_class=IncidentHistoryView,
+            controller_class=IncidentHistoryController,
+            model_class=IncidentHistoryModel
+        ),
+        "settings": ViewConfiguration(
+            view_class=SettingsView,
+            controller_class=SettingsController
+        ),
+        "alerts": ViewConfiguration(
+            view_class=AlertsView,
+            controller_class=AlertsController,
+            observes_settings=True
+        ),
+        "about_system": ViewConfiguration(
+            view_class=AboutSystemView
+        ),
+        "contact_us": ViewConfiguration(
+            view_class=ContactView,
+            controller_class=ContactController
+        )
+    }
+
     def __init__(self, root):
-        self.system_status_model = SystemStatusModel()
+        """Initialize router with root window"""
         self.root = root
-        self.views = {}
-        self.alert_model = AlertModel()
-        self.incident_history_model = IncidentHistoryModel()
+        self.views: Dict = {}
+        self.controllers: Dict = {}
+        self.models: Dict = {}
 
-        # Initialize the settings controller first as it's needed for configuration
-        self.settings_controller = SettingsController()
-        # Controllers will be initialized when their views are created
-        self.alerts_controller = None
-        self.dashboard_controller = None
+        # Initialize AlertManager
+        AlertManager().load_acknowledged_alerts()
 
-    def register(self, name, view_class, controller=None):
-        """Register a view by name if not already registered."""
-        if name not in self.views:
+        # Initialize core components
+        self.initialize_core_components()
+        logger.info("Router initialized")
+
+    def initialize_core_components(self):
+        """Initialize essential models and controllers"""
+        try:
+            # Initialize settings controller first
+            self.settings_controller = SettingsController()
+            self.controllers['settings'] = self.settings_controller
+
+            # Initialize core models
+            self.models['system_status'] = SystemStatusModel()
+            self.models['incident_history'] = IncidentHistoryModel()
+
+            logger.info("Core components initialized")
+        except Exception as e:
+            logger.error(f"Error initializing core components: {e}")
+            raise
+
+    def create_view(self, name: str) -> None:
+        try:
+            config = self.VIEW_CONFIGS.get(name)
+            if not config:
+                logger.error(f"No configuration found for view: {name}")
+                return
+
+            # Create model if specified
+            model = None
+            if config.model_class:
+                model = self.models.get(name) or config.model_class()
+                self.models[name] = model
+
+            # Create controller
+            controller = None
+            if config.controller_class:
+                if name == "settings":
+                    controller = self.settings_controller
+                elif model:
+                    controller = config.controller_class(model)
+                else:
+                    controller = config.controller_class()
+                self.controllers[name] = controller
+
+            # Create view
+            view = config.view_class(self.root.main_content_frame)
+            self.views[name] = view
+
+            # Set up view-controller relationship
             if controller:
-                self.views[name] = view_class(self.root.main_content_frame, controller)
-            else:
-                self.views[name] = view_class(self.root.main_content_frame)
+                view.set_controller(controller)
+                controller.set_view(view)
 
+            # Add settings observer if needed
+            if config.observes_settings and controller:
+                self.settings_controller.add_observer(controller.on_config_change)
+
+            logger.info(f"Created view: {name}")
+
+        except Exception as e:
+            logger.error(f"Error creating view {name}: {e}")
+            raise
+
+    def show(self, name: str) -> None:
+        try:
+            # Hide all current views
+            for view in self.views.values():
+                view.grid_forget()
+
+            # Create view if it doesn't exist
+            if name not in self.views:
+                self.create_view(name)
+
+            # Show the requested view
             self.views[name].grid(row=0, column=0, sticky="nsew")
 
-    def show(self, name):
-        """Show the requested view and hide others."""
-        for view in self.views.values():
-            view.grid_forget()
+            # Refresh view if needed
+            config = self.VIEW_CONFIGS.get(name)
+            if config and config.needs_refresh:
+                controller = self.controllers.get(name)
+                if controller and hasattr(controller, 'update_dashboard'):
+                    # Make sure view is set before updating
+                    if not controller.view:
+                        controller.set_view(self.views[name])
+                    controller.update_dashboard()
 
-        if name not in self.views:
-            if name == "dashboard":
-                view = DashboardView(self.root.main_content_frame)
-                self.dashboard_controller = DashboardController(view)
-                view.set_controller(self.dashboard_controller)
-                self.views[name] = view
-                # Add observer for settings changes
-                self.settings_controller.add_observer(self.dashboard_controller.on_config_change)
+            logger.info(f"Showed view: {name}")
 
-            elif name == "system_status":
-                model = self.system_status_model
-                view = SystemStatusView(self.root.main_content_frame, None)
-                controller = SystemStatusController(model, view)
-                view.set_controller(controller)
-                self.views[name] = view
+        except Exception as e:
+            logger.error(f"Error showing view {name}: {e}")
+            raise
 
-            elif name == "incident_history":
-                model = self.incident_history_model
-                view = IncidentHistoryView(self.root.main_content_frame, None)
-                controller = IncidentHistoryController(model, view)
-                view.set_controller(controller)
-                self.views[name] = view
-
-            elif name == "settings":
-                view = SettingsView(self.root.main_content_frame, self.settings_controller)
-                self.views[name] = view
-
-            elif name == "alerts":
-                view = AlertsView(self.root.main_content_frame)
-                self.alerts_controller = AlertsController(view)
-                view.set_controller(self.alerts_controller)
-                self.views[name] = view
-                # Add observer for settings changes
-                self.settings_controller.add_observer(self.alerts_controller.on_config_change)
-
-            elif name == "about_system":
-                self.register(name, AboutSystemView)
-
-            elif name == "contact_us":
-                view = ContactView(self.root.main_content_frame)
-                controller = ContactController(view)
-                view.set_controller(controller)
-                self.views[name] = view
-
-        self.views[name].grid(row=0, column=0, sticky="nsew")
-
-        # Update views that need refreshing when shown
-        if name == "dashboard" and self.dashboard_controller:
-            self.dashboard_controller.update_dashboard()
+    def cleanup(self):
+        """Cleanup resources when closing the application"""
+        try:
+            for controller in self.controllers.values():
+                if hasattr(controller, 'cleanup'):
+                    controller.cleanup()
+            logger.info("Router cleanup completed")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
