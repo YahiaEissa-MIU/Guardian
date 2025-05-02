@@ -4,7 +4,8 @@ import urllib3
 from datetime import datetime
 import logging
 from models.wazuh_config import WazuhConfig
-
+from utils.alert_manager import AlertManager
+from utils.config_manager import ConfigManager
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Shared storage for acknowledged alerts
@@ -15,28 +16,57 @@ class AlertsController:
     def __init__(self, view=None):
         print("Initializing AlertsController...")
         self.view = view
-        self.wazuh_config = WazuhConfig.load_from_file()
+        self.config_manager = ConfigManager()
+        self.wazuh_config = self.config_manager.wazuh_config
         self._token = None
         self._token_timestamp = None
         self.session = requests.Session()
         self.session.verify = False
         self.session.timeout = 10
-        self.acknowledged_alerts = set()
+        self.acknowledged_alerts = set()  # Local set for acknowledged alerts
         self.windows_agent_id = None
+        self.current_alerts = []  # Add this line to store alerts
+        self.alert_manager = AlertManager()
+        self.alert_manager.load_acknowledged_alerts()
 
-        # Load previously acknowledged alerts if they exist
-        try:
-            with open('acknowledged_alerts.txt', 'r') as f:
-                for line in f:
-                    acknowledged_alerts_storage.add(line.strip())
-            print(f"Loaded {len(acknowledged_alerts_storage)} acknowledged alerts")
-        except FileNotFoundError:
-            print("No previously acknowledged alerts found")
-            pass
+        # Add this line to observe AlertManager
+        self.alert_manager.add_observer(self)
+
+        # Load acknowledged alerts at initialization
+        self.load_acknowledged_alerts()
 
         # Initialize with system checks
         self.verify_api_configuration()
         self.get_windows_agent_id()
+
+        # Add as observer
+        self.config_manager.add_wazuh_observer(self.on_config_change)
+
+        # If view is provided, initialize it
+        if self.view:
+            self.view.after(100, self.view.initial_load)
+
+    def load_acknowledged_alerts(self):
+        """Load acknowledged alerts from file"""
+        try:
+            with open('acknowledged_alerts.txt', 'r') as f:
+                self.acknowledged_alerts = set(line.strip() for line in f)
+            print(f"Loaded {len(self.acknowledged_alerts)} acknowledged alerts")
+        except FileNotFoundError:
+            print("No acknowledged alerts file found")
+            self.acknowledged_alerts = set()
+
+    def set_view(self, view):
+        """Set the view and trigger initial update"""
+        self.view = view
+        if self.view:
+            self.view.after(100, self.view.initial_load)
+
+    def update_alerts(self):
+        """Update the alerts display"""
+        if self.view:
+            alerts = self.get_alerts()
+            self.view.update_alerts(alerts)  # Make sure this method exists in your view
 
     def on_config_change(self, new_config: WazuhConfig):
         """Observer method for configuration changes"""
@@ -84,11 +114,10 @@ class AlertsController:
 
     def get_wazuh_token(self):
         """Get authentication token from Wazuh"""
-        print("\n=== Getting Wazuh Token ===")
         try:
+            # Use existing token if valid
             if self._token and self._token_timestamp:
                 if (datetime.now() - self._token_timestamp).seconds < 3000:
-                    print("Using existing token")
                     return self._token
 
             print("Requesting new Wazuh token...")
@@ -144,8 +173,9 @@ class AlertsController:
     def fetch_data(self, endpoint, params=None):
         """Fetch data from Wazuh API with error handling"""
         try:
-            print(f"\nFetching data from endpoint: {endpoint}")
-            print(f"Parameters: {params}")
+            if not self._token:
+                if not self.get_wazuh_token():
+                    return None
 
             base_url = f"https://{self.wazuh_config.url}"
             if not base_url.endswith(':55000'):
@@ -177,16 +207,6 @@ class AlertsController:
 
         try:
             all_alerts = []
-
-            # Track patterns that indicate ransomware
-            pattern_tracking = {
-                'mass_operations': {'count': 0, 'timeframe': datetime.now()},
-                'critical_files': set(),
-                'extension_changes': set(),
-                'system_files': set()
-            }
-
-            # Fetch FIM events
             syscheck_response = self.fetch_data(f'syscheck/{self.windows_agent_id}', {
                 'limit': 100,
                 'sort': 'date'
@@ -201,28 +221,25 @@ class AlertsController:
                         event_type = item.get('type', '').lower()
                         timestamp_str = item.get('date', '')
 
-                        # Check if alert is already acknowledged
+                        # Check if alert is acknowledged
                         alert_id = f"{timestamp_str}_{file_path}"
-                        if alert_id in acknowledged_alerts_storage:
+                        if alert_id in self.acknowledged_alerts:
                             print(f"Skipping acknowledged alert: {alert_id}")
                             continue
 
-                        # Check for ransomware indicators
+                        # Process alert only if not acknowledged
                         is_suspicious = False
                         severity = "low"
                         alert_type = "File Change"
 
-                        # Check suspicious paths
                         if any(path in file_path for path in self.wazuh_config.suspicious_paths):
                             is_suspicious = True
                             severity = "medium"
 
-                        # Check for modifications or deletions
                         if event_type in ['modified', 'deleted']:
                             is_suspicious = True
                             severity = "high"
 
-                        # Check for ransom notes
                         if 'readme' in file_path and 'ransom' in file_path:
                             is_suspicious = True
                             severity = "high"
@@ -240,14 +257,19 @@ class AlertsController:
                         print(f"Error processing alert item: {e}")
                         continue
 
-                # Sort alerts by severity
-                sorted_alerts = sorted(
-                    all_alerts,
-                    key=lambda x: {'high': 0, 'medium': 1, 'low': 2}[x['actions']]
-                )
+            # Sort alerts by severity
+            sorted_alerts = sorted(
+                all_alerts,
+                key=lambda x: {'high': 0, 'medium': 1, 'low': 2}[x['actions']]
+            )
 
-                print(f"Found {len(sorted_alerts)} potential ransomware indicators")
-                return sorted_alerts
+            print(f"Found {len(sorted_alerts)} unacknowledged alerts")
+
+            # Store the alerts before returning
+            self.current_alerts = sorted_alerts
+            print(f"Stored {len(self.current_alerts)} alerts in AlertsController")
+
+            return sorted_alerts
 
         except Exception as e:
             print(f"Error in get_alerts: {e}")
@@ -255,28 +277,33 @@ class AlertsController:
 
     def acknowledge_alert(self):
         """Handle alert acknowledgment"""
+        print("\n=== Acknowledging Alert ===")
         if self.view and self.view.tree:
             selected_item = self.view.tree.focus()
             if selected_item:
                 try:
                     values = self.view.tree.item(selected_item)['values']
                     alert_id = f"{values[0]}_{values[3]}"  # timestamp_filepath
-                    self.acknowledged_alerts.add(alert_id)
-                    acknowledged_alerts_storage.add(alert_id)
-                    print(f"Alert acknowledged: {alert_id}")
-                    print(f"Total acknowledged alerts: {len(acknowledged_alerts_storage)}")
+                    print(f"Acknowledging alert: {alert_id}")
 
-                    # Save to file
-                    try:
-                        with open('acknowledged_alerts.txt', 'a') as f:
-                            f.write(f"{alert_id}\n")
-                    except Exception as e:
-                        print(f"Error saving acknowledged alert: {e}")
+                    # Use AlertManager to acknowledge
+                    AlertManager.add_acknowledged_alert(alert_id)
+                    print("Alert added to AlertManager")
 
+                    # Remove the specific item immediately
                     self.view.tree.delete(selected_item)
-                    self.view.details_text.configure(state="normal")
-                    self.view.details_text.delete("1.0", "end")
-                    self.view.details_text.insert("1.0", "Alert acknowledged and removed")
-                    self.view.details_text.configure(state="disabled")
+                    print(f"Removed alert item: {selected_item}")
+
+                    # Then update the full alert list
+                    self.update_alerts()
                 except Exception as e:
                     print(f"Error acknowledging alert: {e}")
+
+    def on_alerts_updated(self):
+        """Called when alerts are acknowledged"""
+        print("AlertsController: Alerts updated notification received")
+        if self.view:
+            # Force a refresh of the alerts
+            alerts = self.get_alerts()
+            print(f"Fetched {len(alerts)} alerts after acknowledgment")
+            self.view.update_alerts(alerts)

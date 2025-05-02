@@ -1,8 +1,10 @@
 # alerts_view.py
+import traceback
 from tkinter import ttk
 import customtkinter as ctk
 import threading
 import time
+from utils.alert_manager import AlertManager
 
 
 class AlertsView(ctk.CTkFrame):
@@ -14,6 +16,8 @@ class AlertsView(ctk.CTkFrame):
         self.details_text = None
         self.update_thread = None
         self.running = True
+
+        AlertManager.add_observer(self)
 
         if controller:
             self.set_controller(controller)
@@ -34,7 +38,20 @@ class AlertsView(ctk.CTkFrame):
         print("Setting controller and initializing view...")  # Debug print
         self.controller = controller
         self.show_alerts_page()
+
+        # Immediate update after UI is created
+        self.after(100, self.initial_load)  # Use after to ensure UI is ready
+
+        # Start periodic updates after initial load
         self.start_periodic_updates()
+
+    def initial_load(self):
+        """Perform initial load of alerts"""
+        print("Performing initial load of alerts...")
+        if self.controller:
+            alerts = self.controller.get_alerts()
+            print(f"Initial load received {len(alerts)} alerts")
+            self.update_alerts(alerts)
 
     def start_periodic_updates(self):
         """Start the periodic updates thread"""
@@ -152,31 +169,76 @@ class AlertsView(ctk.CTkFrame):
 
     def acknowledge_alert(self):
         """Handle alert acknowledgment"""
-        print("Attempting to acknowledge alert...")  # Debug print
+        print("Attempting to acknowledge alert...")
         if self.controller:
-            self.controller.acknowledge_alert()
+            selected_item = self.tree.focus()
+            if selected_item:
+                try:
+                    # Store values before acknowledgment
+                    values = self.tree.item(selected_item)['values']
+
+                    # Acknowledge the alert through the controller
+                    self.controller.acknowledge_alert()
+
+                    # Update details text immediately
+                    self.details_text.configure(state="normal")
+                    self.details_text.delete("1.0", "end")
+                    self.details_text.insert("1.0", "Alert has been acknowledged")
+                    self.details_text.configure(state="disabled")
+
+                    # Remove the item directly from the tree
+                    self.tree.delete(selected_item)
+
+                    # No need for immediate refresh as the observer pattern will handle updates
+                    print(f"Successfully acknowledged and removed alert: {values}")
+
+                except Exception as e:
+                    print(f"Error during acknowledgment: {e}")
+                    self.details_text.configure(state="normal")
+                    self.details_text.delete("1.0", "end")
+                    self.details_text.insert("1.0", f"Error acknowledging alert: {str(e)}")
+                    self.details_text.configure(state="disabled")
         else:
-            print("Controller not available for acknowledgment")  # Debug print
+            print("Controller not available for acknowledgment")
 
     def update_alerts(self, alerts):
         """Update the treeview with new alerts"""
-        print(f"Updating alerts view with {len(alerts)} alerts")  # Debug print
+        print(f"Updating alerts view with {len(alerts)} alerts")
         if self.tree is None:
-            print("Tree view not initialized!")  # Debug print
+            print("Tree view not initialized!")
             return
 
         try:
+            # Store current selection
+            selected_items = self.tree.selection()
+            print(f"Current selection: {selected_items}")
+
+            # Clear existing items
             self.tree.delete(*self.tree.get_children())
+
+            # Filter and add unacknowledged alerts
+            added_count = 0
             for alert in alerts:
-                print(f"Adding alert: {alert}")  # Debug print
-                self.tree.insert("", "end", values=(
-                    alert["timestamp"],
-                    alert["actions"],
-                    alert["type"],
-                    alert["file"]
-                ))
+                alert_id = f"{alert['timestamp']}_{alert['file']}"
+                if not self.controller.alert_manager.is_acknowledged(alert_id):
+                    item_id = self.tree.insert("", "end", values=(
+                        alert["timestamp"],
+                        alert["actions"],
+                        alert["type"],
+                        alert["file"]
+                    ))
+                    added_count += 1
+
+                    # Restore selection if item still exists
+                    if alert_id in selected_items:
+                        self.tree.selection_set(item_id)
+                        print(f"Restored selection for: {alert_id}")
+
+            print(f"Added {added_count} unacknowledged alerts to view")
+
         except Exception as e:
-            print(f"Error updating alerts: {e}")  # Debug print
+            print(f"Error updating alerts: {e}")
+            traceback.print_exc()
 
     def refresh_alerts(self):
         """Manually refresh alerts"""
@@ -228,8 +290,24 @@ class AlertsView(ctk.CTkFrame):
 
     def destroy(self):
         """Clean up when the view is destroyed"""
-        print("Cleaning up alerts view...")  # Debug print
+        print("Cleaning up alerts view...")
         self.running = False
         if self.update_thread:
             self.update_thread.join(timeout=1)
+
         super().destroy()
+
+    def on_alert_acknowledged(self, alert_id):
+        """Handle alert acknowledgment notification"""
+        print(f"AlertsView received acknowledgment for: {alert_id}")
+        for item in self.tree.get_children():
+            values = self.tree.item(item)['values']
+            current_id = f"{values[0]}_{values[3]}"
+            if current_id == alert_id:
+                self.tree.delete(item)
+                break
+
+    def on_alerts_updated(self):
+        """Observer method called when alerts are updated"""
+        print("AlertsView received alert update notification")
+        self.refresh_alerts()
