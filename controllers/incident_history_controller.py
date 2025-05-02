@@ -6,34 +6,68 @@ from reportlab.pdfgen import canvas
 import subprocess
 import logging
 
+from utils.config_manager import ConfigManager
+
 
 class IncidentHistoryController:
-    def __init__(self, model, view):
-        self.model = model
+    def __init__(self, model=None):
+        self.config_manager = ConfigManager()
+        self.model = model or self.config_manager.incident_model
+        self.view = None
+
+        # Debug print configuration state
+        print(f"Initial Configuration State:")
+        print(f"URL: {self.model.shuffle_url}")
+        print(f"API Key: {'Set' if self.model.shuffle_api_key else 'Not Set'}")
+        print(f"Workflow: {self.model.workflow_name}")
+        print(f"Is Configured: {self.model.is_configured}")
+
+    def on_config_change(self, new_config):
+        """Handle configuration changes"""
+        self.model = new_config
+        if self.view:
+            self.refresh_incidents()
+
+    def set_view(self, view):
         self.view = view
         self.view.set_controller(self)
-        # Add the view as an observer to the model
         self.model.add_observer(self.view.update_incidents)
-        # Initial data load
+        # Now that view is set, we can safely refresh incidents
         self.refresh_incidents()
 
     def refresh_incidents(self):
         """Refreshes incidents from Shuffle SOAR"""
-        try:
-            success = self.model.sync_incidents()
-            if success:
-                self.view.update_incidents()
-                return True
-            else:
-                self.view.show_message("Failed to fetch incidents from Shuffle", "red")
+        print("\n=== Refreshing Incidents ===")
+
+        if not self.model.is_configured:
+            print("Shuffle not configured, checking configuration...")
+            self.model = self.config_manager.incident_model
+            if not self.model.is_configured:
+                print("Configuration still invalid")
+                if self.view:
+                    self.view.show_message("Shuffle not configured. Please configure in Settings.", "red")
                 return False
-        except Exception as e:
-            logging.error(f"Error refreshing incidents: {str(e)}")
-            self.view.show_message(f"Error refreshing incidents: {str(e)}", "red")
+
+        print("Attempting to sync incidents...")
+        success = self.model.sync_incidents()
+
+        if success:
+            print("Successfully synced incidents")
+            if self.view:
+                self.view.update_incidents()
+            return True
+        else:
+            print("Failed to sync incidents")
+            if self.view:
+                self.view.show_message("Failed to fetch incidents from Shuffle", "red")
             return False
 
     def get_incidents(self, filter_type=None, filter_value=None):
         """Gets filtered incidents from the model."""
+        if not self.view:  # Guard clause
+            logging.error("View not set when attempting to get incidents")
+            return []
+
         try:
             return self.model.get_incidents(filter_type, filter_value)
         except Exception as e:
@@ -42,7 +76,10 @@ class IncidentHistoryController:
             return []
 
     def export_incident_history(self):
-        """Handles exporting filtered incident history to a CSV file."""
+        if not self.view:
+            logging.error("View not set when attempting to export incident history")
+            return
+
         try:
             filter_type = self.view.get_filter_type()
             filter_value = self.view.get_filter_value()
@@ -64,7 +101,9 @@ class IncidentHistoryController:
                 self.view.show_message(message, "red")
 
         except Exception as e:
+
             logging.error(f"Error in export_incident_history: {str(e)}")
+
             self.view.show_message(f"Error exporting incidents: {str(e)}", "red")
 
     def generate_pdf(self):

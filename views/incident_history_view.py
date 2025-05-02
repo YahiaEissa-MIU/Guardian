@@ -3,9 +3,9 @@ from tkinter import ttk
 
 
 class IncidentHistoryView(ctk.CTkFrame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.controller = controller
+        self.controller = None
         self.filter_type_combo = None
         self.filter_entry = None
         self.incident_frame = None
@@ -14,9 +14,9 @@ class IncidentHistoryView(ctk.CTkFrame):
         self.create_incident_response_history_page()
 
     def set_controller(self, controller):
-        """Sets the controller reference."""
+        """Sets the controller and initializes the data"""
         self.controller = controller
-        self.update_incidents()  # Load initial data from the controller
+        self.update_incidents()  # Load initial data
 
     def create_incident_response_history_page(self):
         """Creates the incident response history UI with a modern look."""
