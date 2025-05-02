@@ -21,6 +21,8 @@ class DashboardView(ctk.CTkFrame):
     def set_controller(self, controller):
         """Set the controller for this view"""
         self.controller = controller
+        # Perform initial update when controller is set
+        self.controller.update_dashboard()  # Add this line
 
     def show_message(self, message, color):
         """Display messages/errors to the user"""
