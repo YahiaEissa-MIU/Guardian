@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Type
 import logging
+import os
 from dataclasses import dataclass
 
 from controllers import (
@@ -13,9 +14,28 @@ from views import (
     AlertsView, ContactView, AboutSystemView
 )
 
+
 # Configure logging
+def setup_debug_logging():
+    log_dir = os.path.join(os.environ['APPDATA'], 'Guardian', 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Configure file handler for debug logging
+    debug_logger = logging.getLogger('guardian_debug')
+    debug_logger.setLevel(logging.DEBUG)
+
+    log_file = os.path.join(log_dir, 'sync_debug.log')
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(message)s'))
+    debug_logger.addHandler(file_handler)
+
+    return debug_logger
+
+
+# Initialize loggers
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+debug_logger = setup_debug_logging()
 
 
 @dataclass
@@ -56,6 +76,7 @@ class Router:
         "alerts": ViewConfiguration(
             view_class=AlertsView,
             controller_class=AlertsController,
+            needs_refresh=True,  # Add this
             observes_settings=True
         ),
         "about_system": ViewConfiguration(
@@ -142,6 +163,10 @@ class Router:
 
     def show(self, name: str) -> None:
         try:
+            debug_logger.info(f"=== Router Show: {name} ===")
+            debug_logger.info(f"Controller exists: {name in self.controllers}")
+            debug_logger.info(f"View exists: {name in self.views}")
+
             # Hide all current views
             for view in self.views.values():
                 view.grid_forget()
@@ -155,18 +180,29 @@ class Router:
 
             # Refresh view if needed
             config = self.VIEW_CONFIGS.get(name)
+            debug_logger.info(f"Needs refresh: {config.needs_refresh if config else None}")
+
             if config and config.needs_refresh:
                 controller = self.controllers.get(name)
-                if controller and hasattr(controller, 'update_dashboard'):
+                if controller:
                     # Make sure view is set before updating
                     if not controller.view:
                         controller.set_view(self.views[name])
-                    controller.update_dashboard()
+
+                    # Call appropriate update method based on controller type
+                    if isinstance(controller, DashboardController):
+                        debug_logger.info("Calling dashboard update")
+                        controller.update_dashboard()
+                    elif isinstance(controller, AlertsController):
+                        debug_logger.info("Calling alerts update")
+                        controller.update_alerts()
 
             logger.info(f"Showed view: {name}")
 
         except Exception as e:
-            logger.error(f"Error showing view {name}: {e}")
+            error_msg = f"Error showing view {name}: {e}"
+            logger.error(error_msg)
+            debug_logger.error(error_msg)
             raise
 
     def cleanup(self):

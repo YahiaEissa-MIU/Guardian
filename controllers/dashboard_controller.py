@@ -6,17 +6,41 @@ from datetime import datetime
 from controllers.alerts_controller import AlertsController
 from models.wazuh_config import WazuhConfig
 from utils.alert_manager import AlertManager
+import logging
+import os
+from datetime import datetime
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from utils.config_manager import ConfigManager
 
 
+# Configure debug logging
+def setup_debug_logging():
+    log_dir = os.path.join(os.environ['APPDATA'], 'Guardian', 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+
+    debug_logger = logging.getLogger('guardian_debug')
+    debug_logger.setLevel(logging.DEBUG)
+
+    log_file = os.path.join(log_dir, 'sync_debug.log')
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(message)s'))
+    debug_logger.addHandler(file_handler)
+
+    return debug_logger
+
+
+debug_logger = setup_debug_logging()
+
+
 class DashboardController:
     def __init__(self):
-        print("Initializing DashboardController...")
+        debug_logger.info("=== DashboardController Initialization ===")
         self.view = None
         self.config_manager = ConfigManager()
         self.wazuh_config = self.config_manager.wazuh_config
+        debug_logger.info(f"Initial wazuh_config: {self.wazuh_config.__dict__ if self.wazuh_config else None}")
+
         self._token = None
         self._token_timestamp = None
         self.acknowledged_alerts = set()  # Add acknowledged alerts set
@@ -28,11 +52,11 @@ class DashboardController:
         self.session = requests.Session()
         self.session.verify = False
         self.session.timeout = 2
-        print("DashboardController initialized")
+        debug_logger.info("DashboardController initialized")
 
         # Load acknowledged alerts
         self.load_acknowledged_alerts()
-        print("DashboardController initialized")
+        debug_logger.info("Acknowledged alerts loaded")
 
         # Add as observer
         self.config_manager.add_wazuh_observer(self.on_config_change)
@@ -215,9 +239,8 @@ class DashboardController:
             return None
 
     def update_dashboard(self):
-        """Update dashboard data by directly fetching alerts"""
-        print("\n=== Starting Dashboard Update ===")
-        print("DashboardController: Initializing dashboard update process...")
+        debug_logger.info("=== Starting Dashboard Update ===")
+        debug_logger.info("DashboardController: Initializing dashboard update process...")
 
         if not self.view:
             print("Error: View not set")
@@ -226,6 +249,7 @@ class DashboardController:
         try:
             all_alerts = []
             windows_id = self.get_windows_agent_id()
+            debug_logger.info(f"Windows agent ID: {windows_id}")
 
             if windows_id and self.get_wazuh_token():
                 print(f"Fetching alerts for Windows agent ID: {windows_id}")
@@ -287,7 +311,7 @@ class DashboardController:
                     )
                     all_alerts = sorted_alerts
 
-                print(f"Processing complete. Found {len(all_alerts)} unacknowledged alerts")
+                debug_logger.info(f"Processing complete. Found {len(all_alerts)} unacknowledged alerts")
 
             # Count alerts
             total_alerts = len(all_alerts)
@@ -302,11 +326,15 @@ class DashboardController:
                 "total_alerts": total_alerts
             }
 
-            print(f"Updating dashboard with stats: {stats}")
+            debug_logger.info(f"Updating dashboard with stats: {stats}")
             self.view.update_stats(stats)
-            print("Dashboard update complete")
+            debug_logger.info("Dashboard update complete")
 
         except Exception as e:
-            print(f"DashboardController: Error in update_dashboard: {e}")
+
+            error_msg = f"Error in update_dashboard: {e}"
+
+            debug_logger.error(error_msg)
+
             if self.view:
-                self.view.show_message(f"Error updating dashboard: {e}", "red")
+                self.view.show_message(error_msg, "red")
