@@ -38,9 +38,14 @@ class IncidentHistoryModel:
             self.observers.append(observer)
 
     def notify_observers(self):
-        """Notifies all observers of data changes"""
-        for observer in self.observers:
-            observer()
+        """Notify all registered observers of changes"""
+        for observer in list(self.observers):  # Use a copy to avoid modification during iteration
+            try:
+                observer()  # Call the observer function
+            except Exception as e:
+                print(f"Error notifying observer {observer}: {e}")
+                # Consider removing failed observers
+                self.observers.remove(observer)
 
     async def get_workflow_id(self):
         """Fetches workflow ID based on workflow name"""
@@ -428,4 +433,6 @@ class IncidentHistoryModel:
             self.is_configured = True
             return True
         return False
+
+
 

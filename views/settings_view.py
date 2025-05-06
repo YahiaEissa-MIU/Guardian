@@ -1,3 +1,4 @@
+from tkinter import messagebox
 import customtkinter as ctk
 from typing import List
 
@@ -5,228 +6,158 @@ from typing import List
 class SettingsView(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
-        print("Initializing SettingsView...")
         self.router = parent
         self.controller = None
-        # Define common styles
-        self.SECTION_FONT = ("Helvetica", 18, "bold")
-        self.SUBTITLE_FONT = ("Helvetica", 14)
-        self.BUTTON_FONT = ("Helvetica", 12)
-        self.SECTION_PADDING = (20, 15)
-        self.WIDGET_PADDING = (0, 8)
+        self.current_theme = ctk.get_appearance_mode().lower()
+
+        # Define theme colors
+        self.colors = {
+            "dark": {
+                "bg": "#2b2b2b",
+                "fg": "#ffffff",
+                "label": "#9ba3af",
+                "section_bg": "gray17",
+                "container_bg": "gray16",
+                "accent": "#1f538d",
+                "entry_bg": "#333333",
+                "entry_fg": "#ffffff",
+                "border": "#404040"
+            },
+            "light": {
+                "bg": "#f0f0f0",
+                "fg": "#333333",
+                "label": "#5b6676",
+                "section_bg": "gray85",
+                "container_bg": "gray90",
+                "accent": "#4a8ede",
+                "entry_bg": "#ffffff",
+                "entry_fg": "#333333",
+                "border": "#d0d0d0"
+            }
+        }
+
+        # Theme-aware font configuration
+        self.fonts = {
+            "section": ("JetBrains Mono", 18, "bold"),
+            "header": ("JetBrains Mono", 24, "bold"),
+            "subtitle": ("JetBrains Mono", 14),
+            "label": ("JetBrains Mono", 12),
+            "button": ("JetBrains Mono", 12)
+        }
+
         print("SettingsView initialized")
 
     def set_controller(self, controller):
-        """Sets the controller and initializes the view"""
         self.controller = controller
         self.controller.set_view(self)
+        # Update the current theme when controller is set
+        self.current_theme = ctk.get_appearance_mode().lower()
         self.create_settings_page()
 
-    def get_agent_ip(self):
-        """Get the IP address from the agent IP entry field"""
-        if hasattr(self, 'agent_ip_entry'):
-            return self.agent_ip_entry.get().strip()
-        return ""
-
     def create_settings_page(self):
-        print("Creating settings page...")
         for widget in self.winfo_children():
             widget.destroy()
 
-        # Main container
-        main_container = ctk.CTkFrame(self, fg_color="transparent")
+        # Main container with theme-aware styling
+        main_container = ctk.CTkFrame(
+            self,
+            fg_color=self.colors[self.current_theme]["container_bg"],
+            corner_radius=15
+        )
         main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
         # Header
-        header_frame = ctk.CTkFrame(main_container, fg_color="transparent")
-        header_frame.pack(fill="x", pady=(0, 20))
+        self.create_header(main_container)
+
+        # Scrollable content
+        content = ctk.CTkScrollableFrame(
+            main_container,
+            fg_color="transparent",
+            corner_radius=0
+        )
+        content.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        # Create settings sections
+        self.create_api_connection_settings(content)
+        self.create_agent_settings(content)
+        self.create_shuffle_settings(content)
+
+    def create_header(self, parent):
+        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header.pack(fill="x", padx=20, pady=20)
+
+        title = ctk.CTkLabel(
+            header,
+            text="Guardian Settings",
+            font=self.fonts["header"],
+            text_color=self.colors[self.current_theme]["fg"]
+        )
+        title.pack(anchor="w")
+
+        description = ctk.CTkLabel(
+            header,
+            text="Configure your security preferences and connections",
+            font=self.fonts["subtitle"],
+            text_color=self.colors[self.current_theme]["label"]
+        )
+        description.pack(anchor="w", pady=(5, 0))
+
+    def create_section_frame(self, parent, title, description):
+        frame = ctk.CTkFrame(
+            parent,
+            fg_color=self.colors[self.current_theme]["section_bg"],
+            corner_radius=10
+        )
+        frame.pack(fill="x", pady=(0, 15), padx=2)
+
+        header = ctk.CTkFrame(frame, fg_color="transparent")
+        header.pack(fill="x", padx=15, pady=15)
 
         title_label = ctk.CTkLabel(
-            header_frame,
-            text="Settings",
-            font=("Helvetica", 24, "bold")
+            header,
+            text=title,
+            font=self.fonts["section"],
+            text_color=self.colors[self.current_theme]["fg"]
         )
-        title_label.pack(side="left")
+        title_label.pack(anchor="w")
 
-        # Main scrollable frame
-        scrollable_frame = ctk.CTkScrollableFrame(
-            main_container,
-            width=680,
-            height=580,
-            corner_radius=15
-        )
-        scrollable_frame.pack(fill="both", expand=True)
+        if description:
+            desc_label = ctk.CTkLabel(
+                header,
+                text=description,
+                font=self.fonts["subtitle"],
+                text_color=self.colors[self.current_theme]["label"]
+            )
+            desc_label.pack(anchor="w", pady=(5, 0))
 
-        # Create general settings sections
-        self.create_notification_settings(scrollable_frame)
-        self.create_backup_settings(scrollable_frame)
-        self.create_suspicious_paths_settings(scrollable_frame)
+        content = ctk.CTkFrame(frame, fg_color="transparent")
+        content.pack(fill="x", padx=15, pady=(0, 15))
 
-        # Separator before Advanced settings
-        separator = ctk.CTkFrame(scrollable_frame, height=2, fg_color="gray70")
-        separator.pack(fill="x", pady=20, padx=2)
-
-        # Advanced Settings Header
-        advanced_header = ctk.CTkLabel(
-            scrollable_frame,
-            text="Advanced Settings",
-            font=("Helvetica", 20, "bold")
-        )
-        advanced_header.pack(anchor="w", pady=(0, 20), padx=2)
-
-        # Create advanced settings sections
-        self.create_api_connection_settings(scrollable_frame)
-        self.create_agent_settings(scrollable_frame)
-        self.create_shuffle_settings(scrollable_frame)
-
-    def create_notification_settings(self, parent):
-        section_frame = self.create_section_frame(parent, "Notification Settings")
-
-        # Description label
-        description = ctk.CTkLabel(
-            section_frame,
-            text="Configure desktop notifications for security alerts",
-            font=self.SUBTITLE_FONT
-        )
-        description.pack(anchor="w", pady=(0, 15))
-
-        # Notification switch
-        notification_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
-        notification_frame.pack(fill="x", pady=(0, 10))
-
-        switch = ctk.CTkSwitch(
-            notification_frame,
-            text="Enable desktop notifications",
-            variable=self.controller.notify_var,
-            command=self.controller.toggle_notifications,
-            font=self.SUBTITLE_FONT,
-            height=32
-        )
-        switch.pack(side="left")
-
-        # Test notification button
-        test_notify_button = ctk.CTkButton(
-            section_frame,
-            text="Test Notification",
-            command=self.controller.test_notification,
-            font=self.BUTTON_FONT,
-            height=32,
-            width=120
-        )
-        test_notify_button.pack(anchor="w", pady=(10, 0))
-
-    def create_backup_settings(self, parent):
-        section_frame = self.create_section_frame(parent, "Backup Settings")
-
-        # Description label
-        description = ctk.CTkLabel(
-            section_frame,
-            text="Configure automatic backup settings",
-            font=self.SUBTITLE_FONT
-        )
-        description.pack(anchor="w", pady=(0, 15))
-
-        # Auto backup switch
-        backup_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
-        backup_frame.pack(fill="x", pady=(0, 10))
-
-        switch = ctk.CTkSwitch(
-            backup_frame,
-            text="Enable automatic backup",
-            variable=self.controller.auto_backup_var,
-            command=self.controller.toggle_auto_backup,
-            font=self.SUBTITLE_FONT,
-            height=32
-        )
-        switch.pack(side="left")
-
-        # Backup frequency selection
-        frequency_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
-        frequency_frame.pack(fill="x", pady=(10, 0))
-
-        frequency_label = ctk.CTkLabel(
-            frequency_frame,
-            text="Backup Frequency:",
-            font=self.SUBTITLE_FONT
-        )
-        frequency_label.pack(side="left", padx=(0, 10))
-
-        frequency_menu = ctk.CTkOptionMenu(
-            frequency_frame,
-            values=["Daily", "Weekly", "Monthly"],
-            variable=self.controller.frequency_var,
-            font=self.BUTTON_FONT,
-            height=32
-        )
-        frequency_menu.pack(side="left")
-
-    def create_suspicious_paths_settings(self, parent):
-        section_frame = self.create_section_frame(parent, "Suspicious Paths")
-
-        # Description label
-        description = ctk.CTkLabel(
-            section_frame,
-            text="Monitor these paths for suspicious activities",
-            font=self.SUBTITLE_FONT
-        )
-        description.pack(anchor="w", pady=(0, 10))
-
-        # Paths display
-        self.paths_text = ctk.CTkTextbox(
-            section_frame,
-            height=120,
-            corner_radius=6
-        )
-        self.paths_text.pack(fill="x", pady=(0, 10))
-        self.update_paths_list()
-
-        # Input frame
-        input_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
-        input_frame.pack(fill="x")
-
-        self.path_entry = ctk.CTkEntry(
-            input_frame,
-            placeholder_text="Enter new suspicious path",
-            height=32
-        )
-        self.path_entry.pack(side="left", fill="x", expand=True)
-
-        ctk.CTkButton(
-            input_frame,
-            text="Add Path",
-            command=self.add_path,
-            font=self.BUTTON_FONT,
-            width=100,
-            height=32
-        ).pack(side="left", padx=(10, 0))
+        return content
 
     def create_api_connection_settings(self, parent):
-        section_frame = self.create_section_frame(parent, "API Connection Settings")
-
-        # Description label
-        description = ctk.CTkLabel(
-            section_frame,
-            text="Configure Wazuh API connection settings",
-            font=self.SUBTITLE_FONT
+        content = self.create_section_frame(
+            parent,
+            "API Connection",
+            "Configure Wazuh API connection settings"
         )
-        description.pack(anchor="w", pady=(0, 15))
 
-        # Create input fields with labels
         fields = [
-            ("Server URL:", self.controller.wazuh_url, "Enter Wazuh server URL", ""),
-            ("Username:", self.controller.wazuh_username, "Enter username", ""),
+            ("Server URL:", self.controller.wazuh_url, "Enter Wazuh server URL"),
+            ("Username:", self.controller.wazuh_username, "Enter username"),
             ("Password:", self.controller.wazuh_password, "Enter password", "*")
         ]
 
-        for label_text, variable, placeholder, show in fields:
-            field_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+        for label_text, variable, placeholder, *show in fields:
+            field_frame = ctk.CTkFrame(content, fg_color="transparent")
             field_frame.pack(fill="x", pady=(0, 10))
 
             label = ctk.CTkLabel(
                 field_frame,
                 text=label_text,
-                font=self.SUBTITLE_FONT,
-                width=100
+                font=self.fonts["label"],
+                width=100,
+                text_color=self.colors[self.current_theme]["fg"]
             )
             label.pack(side="left")
 
@@ -234,108 +165,122 @@ class SettingsView(ctk.CTkFrame):
                 field_frame,
                 textvariable=variable,
                 placeholder_text=placeholder,
-                show=show,
+                show=show[0] if show else "",
+                font=self.fonts["label"],
                 height=32,
-                width=400
+                fg_color=self.colors[self.current_theme]["entry_bg"],
+                text_color=self.colors[self.current_theme]["entry_fg"],
+                border_color=self.colors[self.current_theme]["border"]
             )
             entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
 
-        # Buttons frame
-        button_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+        # Button frame with center alignment
+        button_frame = ctk.CTkFrame(content, fg_color="transparent")
         button_frame.pack(fill="x", pady=(10, 0))
 
-        # Test and Save buttons
-        ctk.CTkButton(
-            button_frame,
-            text="Test Connection",
-            command=self.controller.test_connection,
-            font=self.BUTTON_FONT,
-            height=32,
-            width=150
-        ).pack(side="left", padx=(0, 10))
+        # Center alignment container
+        center_frame = ctk.CTkFrame(button_frame, fg_color="transparent")
+        center_frame.pack(expand=True, fill="x")
+        # Configure center frame for center alignment
+        center_frame.columnconfigure(0, weight=1)
+        center_frame.rowconfigure(0, weight=1)
 
-        ctk.CTkButton(
-            button_frame,
+        save_button = ctk.CTkButton(
+            center_frame,
             text="Save Settings",
             command=self.controller.save_settings,
-            font=self.BUTTON_FONT,
+            font=self.fonts["button"],
             height=32,
-            width=150
-        ).pack(side="left")
+            width=150,  # Fixed width for better centering
+            fg_color=self.colors[self.current_theme]["accent"],
+            text_color=self.colors[self.current_theme]["fg"]
+        )
+        save_button.grid(row=0, column=0)  # Using grid for center alignment
 
     def create_agent_settings(self, parent):
-        section_frame = self.create_section_frame(parent, "Agent Settings")
-
-        # Description label
-        description = ctk.CTkLabel(
-            section_frame,
-            text="Configure Wazuh agent connection settings (requires administrator privileges)",
-            font=self.SUBTITLE_FONT,
-            text_color="red"
+        content = self.create_section_frame(
+            parent,
+            "Agent Configuration",
+            "Configure Wazuh agent connection settings (requires administrator privileges)"
         )
-        description.pack(anchor="w", pady=(0, 15))
 
-        # Agent IP Configuration
-        field_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+        field_frame = ctk.CTkFrame(content, fg_color="transparent")
         field_frame.pack(fill="x", pady=(0, 10))
 
         label = ctk.CTkLabel(
             field_frame,
             text="Manager IP:",
-            font=self.SUBTITLE_FONT,
-            width=100
+            font=self.fonts["label"],
+            width=100,
+            text_color=self.colors[self.current_theme]["fg"]
         )
         label.pack(side="left")
 
         self.agent_ip_entry = ctk.CTkEntry(
             field_frame,
             placeholder_text="Enter Wazuh manager IP",
+            font=self.fonts["label"],
             height=32,
-            width=400
+            fg_color=self.colors[self.current_theme]["entry_bg"],
+            text_color=self.colors[self.current_theme]["entry_fg"],
+            border_color=self.colors[self.current_theme]["border"]
         )
         self.agent_ip_entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
 
-        # Button frame
-        button_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+        # Button frame with center alignment
+        button_frame = ctk.CTkFrame(content, fg_color="transparent")
         button_frame.pack(fill="x", pady=(10, 0))
 
-        ctk.CTkButton(
-            button_frame,
+        # Center alignment container
+        center_frame = ctk.CTkFrame(button_frame, fg_color="transparent")
+        center_frame.pack(expand=True, fill="x")
+        # Configure center frame for center alignment
+        center_frame.columnconfigure(0, weight=1)
+        center_frame.rowconfigure(0, weight=1)
+
+        update_button = ctk.CTkButton(
+            center_frame,
             text="Update Agent Configuration",
             command=self.controller.update_agent_config,
-            font=self.BUTTON_FONT,
+            font=self.fonts["button"],
             height=32,
-            width=200
-        ).pack(side="left")
+            width=250,  # Fixed width for better centering
+            fg_color=self.colors[self.current_theme]["accent"],
+            text_color=self.colors[self.current_theme]["fg"]
+        )
+        update_button.grid(row=0, column=0)  # Using grid for center alignment
+
+    def get_agent_ip(self):
+        """Get the agent IP from the entry field"""
+        if hasattr(self, 'agent_ip_entry'):
+            return self.agent_ip_entry.get().strip()
+        else:
+            print("Error: agent_ip_entry not found in SettingsView")
+            return None
 
     def create_shuffle_settings(self, parent):
-        section_frame = self.create_section_frame(parent, "Shuffle SOAR Settings")
-
-        # Description label
-        description = ctk.CTkLabel(
-            section_frame,
-            text="Configure Shuffle SOAR connection settings",
-            font=self.SUBTITLE_FONT
+        content = self.create_section_frame(
+            parent,
+            "Shuffle SOAR Integration",
+            "Configure Shuffle SOAR connection settings"
         )
-        description.pack(anchor="w", pady=(0, 15))
 
-        # Create input fields with labels
         fields = [
-            (
-            "Server URL:", self.controller.shuffle_url, "Enter Shuffle server URL (e.g., http://192.168.1.5:3001)", ""),
-            ("API Key:", self.controller.shuffle_api_key, "Enter Shuffle API key", ""),
-            ("Workflow Name:", self.controller.shuffle_workflow, "Enter workflow name (e.g., test)", "")
+            ("Server URL:", self.controller.shuffle_url, "Enter Shuffle server URL"),
+            ("API Key:", self.controller.shuffle_api_key, "Enter Shuffle API key"),
+            ("Workflow:", self.controller.shuffle_workflow, "Enter workflow name")
         ]
 
-        for label_text, variable, placeholder, show in fields:
-            field_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+        for label_text, variable, placeholder in fields:
+            field_frame = ctk.CTkFrame(content, fg_color="transparent")
             field_frame.pack(fill="x", pady=(0, 10))
 
             label = ctk.CTkLabel(
                 field_frame,
                 text=label_text,
-                font=self.SUBTITLE_FONT,
-                width=100
+                font=self.fonts["label"],
+                width=100,
+                text_color=self.colors[self.current_theme]["fg"]
             )
             label.pack(side="left")
 
@@ -343,80 +288,39 @@ class SettingsView(ctk.CTkFrame):
                 field_frame,
                 textvariable=variable,
                 placeholder_text=placeholder,
-                show=show,
+                font=self.fonts["label"],
                 height=32,
-                width=400
+                fg_color=self.colors[self.current_theme]["entry_bg"],
+                text_color=self.colors[self.current_theme]["entry_fg"],
+                border_color=self.colors[self.current_theme]["border"]
             )
             entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
 
-        # Buttons frame
-        button_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+        # Button frame with center alignment
+        button_frame = ctk.CTkFrame(content, fg_color="transparent")
         button_frame.pack(fill="x", pady=(10, 0))
 
-        # Test and Save buttons
-        ctk.CTkButton(
-            button_frame,
-            text="Test Shuffle Connection",
-            command=self.controller.test_shuffle_connection,
-            font=self.BUTTON_FONT,
-            height=32,
-            width=150
-        ).pack(side="left", padx=(0, 10))
+        # Center alignment container
+        center_frame = ctk.CTkFrame(button_frame, fg_color="transparent")
+        center_frame.pack(expand=True, fill="x")
+        # Configure center frame for center alignment
+        center_frame.columnconfigure(0, weight=1)
+        center_frame.rowconfigure(0, weight=1)
 
-        ctk.CTkButton(
-            button_frame,
-            text="Save Shuffle Settings",
+        save_button = ctk.CTkButton(
+            center_frame,
+            text="Save Settings",
             command=self.controller.save_shuffle_settings,
-            font=self.BUTTON_FONT,
+            font=self.fonts["button"],
             height=32,
-            width=150
-        ).pack(side="left")
-
-    def create_section_frame(self, parent, title):
-        frame = ctk.CTkFrame(parent, corner_radius=10)
-        frame.pack(fill="x", pady=(0, 20), padx=2)
-
-        ctk.CTkLabel(
-            frame,
-            text=title,
-            font=self.SECTION_FONT
-        ).pack(anchor="w", pady=(15, 20), padx=15)
-
-        content_frame = ctk.CTkFrame(frame, fg_color="transparent")
-        content_frame.pack(fill="x", padx=15, pady=(0, 15))
-
-        return content_frame
-
-    def update_paths_list(self):
-        try:
-            print("Updating suspicious paths list...")
-            self.paths_text.configure(state="normal")
-            self.paths_text.delete("1.0", "end")
-            paths = self.controller.get_suspicious_paths()
-            self.paths_text.insert("1.0", "\n".join(paths))
-            self.paths_text.configure(state="disabled")
-            print(f"Updated paths list with {len(paths)} paths")
-        except Exception as e:
-            print(f"Error updating paths list: {e}")
-
-    def add_path(self):
-        try:
-            print("Adding new suspicious path...")
-            path = self.path_entry.get()
-            if path.strip():
-                if self.controller.add_suspicious_path(path):
-                    print(f"Successfully added path: {path}")
-                    self.path_entry.delete(0, "end")
-                    self.update_paths_list()
-                else:
-                    self.show_error("Failed to add path", "The path could not be added. Please try again.")
-            else:
-                self.show_error("Invalid Path", "Please enter a valid path.")
-        except Exception as e:
-            self.show_error("Error", f"An error occurred: {str(e)}")
+            width=150,  # Fixed width for better centering
+            fg_color=self.colors[self.current_theme]["accent"],
+            text_color=self.colors[self.current_theme]["fg"]
+        )
+        save_button.grid(row=0, column=0)  # Using grid for center alignment
 
     def show_error(self, title, message):
-        ctk.messagebox.showerror(title, message)
+        messagebox.showerror(title, message)
 
     def show_info(self, title, message):
-        ctk.messagebox.showinfo(title, message)
+        messagebox.showinfo(title, message)

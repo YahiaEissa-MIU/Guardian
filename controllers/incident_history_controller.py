@@ -15,8 +15,11 @@ class IncidentHistoryController:
         self.model = model or self.config_manager.incident_model
         self.view = None
 
+        # Register for configuration updates
+        self.config_manager.add_shuffle_observer(self.on_config_change)
+
         # Debug print configuration state
-        print(f"Initial Configuration State:")
+        print(f"Initial Configuration State (IncidentHistoryController):")
         print(f"URL: {self.model.shuffle_url}")
         print(f"API Key: {'Set' if self.model.shuffle_api_key else 'Not Set'}")
         print(f"Workflow: {self.model.workflow_name}")
@@ -24,31 +27,67 @@ class IncidentHistoryController:
 
     def on_config_change(self, new_config):
         """Handle configuration changes"""
+        print(f"IncidentHistoryController: Configuration change detected!")
+        print(f"New URL: {new_config.shuffle_url}")
+        print(f"New Workflow: {new_config.workflow_name}")
+        print(f"Is Configured: {new_config.is_configured}")
+
         self.model = new_config
+
+        # Update from config manager to ensure we have the latest version
+        # This is a crucial step that was missing
+        self.model = self.config_manager.get_shuffle_config()
+
         if self.view:
+            print("View exists, refreshing incidents...")
             self.refresh_incidents()
+        else:
+            print("View not set yet, will refresh when view is set")
 
     def set_view(self, view):
         self.view = view
         self.view.set_controller(self)
-        self.model.add_observer(self.view.update_incidents)
+
+        # Important: Check if we need to update our model from config manager
+        latest_config = self.config_manager.get_shuffle_config()
+        if latest_config.is_configured != self.model.is_configured or latest_config.shuffle_url != self.model.shuffle_url:
+            print("Updating model from config manager in set_view")
+            self.model = latest_config
+
+        # Instead, let's use the controller as the proper mediator:
+        self.model.add_observer(self.on_model_update)
+
         # Now that view is set, we can safely refresh incidents
         self.refresh_incidents()
+
+    def on_model_update(self):
+        """Handle updates from the model by updating the view"""
+        if self.view and hasattr(self.view, 'update_incidents'):
+            try:
+                print("Model updated, refreshing view")
+                self.view.update_incidents()
+            except Exception as e:
+                print(f"Error updating view from model: {e}")
 
     def refresh_incidents(self):
         """Refreshes incidents from Shuffle SOAR"""
         print("\n=== Refreshing Incidents ===")
 
+        # Always get the latest configuration
+        latest_config = self.config_manager.get_shuffle_config()
+        if latest_config.is_configured != self.model.is_configured or latest_config.shuffle_url != self.model.shuffle_url:
+            print("Updating model from config manager in refresh_incidents")
+            self.model = latest_config
+
         if not self.model.is_configured:
             print("Shuffle not configured, checking configuration...")
-            self.model = self.config_manager.incident_model
             if not self.model.is_configured:
                 print("Configuration still invalid")
                 if self.view:
                     self.view.show_message("Shuffle not configured. Please configure in Settings.", "red")
                 return False
 
-        print("Attempting to sync incidents...")
+        print(f"Attempting to sync incidents using URL: {self.model.shuffle_url}")
         success = self.model.sync_incidents()
 
         if success:
@@ -62,6 +101,7 @@ class IncidentHistoryController:
                 self.view.show_message("Failed to fetch incidents from Shuffle", "red")
             return False
 
+    # Rest of the methods remain unchanged
     def get_incidents(self, filter_type=None, filter_value=None):
         """Gets filtered incidents from the model."""
         if not self.view:  # Guard clause
@@ -101,9 +141,7 @@ class IncidentHistoryController:
                 self.view.show_message(message, "red")
 
         except Exception as e:
-
             logging.error(f"Error in export_incident_history: {str(e)}")
-
             self.view.show_message(f"Error exporting incidents: {str(e)}", "red")
 
     def generate_pdf(self):
@@ -210,3 +248,19 @@ class IncidentHistoryController:
                         logging.info(f"Cleaned up old file: {filename}")
         except Exception as e:
             logging.error(f"Error cleaning up old files: {str(e)}")
+
+    def cleanup(self):
+        """Cleanup resources when closing the application"""
+        try:
+            # Unregister from ConfigManager
+            self.config_manager.remove_shuffle_observer(self.on_config_change)
+            logging.info("IncidentHistoryController cleanup completed")
+        except Exception as e:
+            logging.error(f"Error during IncidentHistoryController cleanup: {e}")
+
+    # Add in IncidentHistoryController:
+    def view_destroyed(self, view):
+        """Handle view destruction"""
+        if self.view == view:
+            print(f"IncidentHistoryController: View {id(view)} destroyed, clearing reference")
+            self.view = None

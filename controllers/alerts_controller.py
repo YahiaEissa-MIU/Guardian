@@ -14,11 +14,14 @@ class AlertsController:
         print("Initializing AlertsController...")
         self.view = view
         self.config_manager = ConfigManager()
-        self.wazuh_config = self.config_manager.wazuh_config
+        self.wazuh_config = self.config_manager.get_wazuh_config()
         self._token = None
         self._token_timestamp = None
         self.windows_agent_id = None
         self.alert_manager = AlertManager()
+
+        # Register with config manager to get updates
+        self.config_manager.add_wazuh_observer(self.on_config_change)
 
         # Create a persistent session
         self.session = requests.Session()
@@ -47,9 +50,19 @@ class AlertsController:
                 return None
 
             print("Requesting new Wazuh token...")
-            base_url = f"https://{self.wazuh_config.url}"
-            if not base_url.endswith(':55000'):
+
+            # Fix URL format handling
+            url = self.wazuh_config.url.strip()
+            # Remove protocol if present
+            if url.startswith(('http://', 'https://')):
+                url = url.split('://', 1)[1]
+
+            # Format base URL correctly
+            base_url = f"https://{url}"
+            if not ':' in url:  # No port specified
                 base_url = f"{base_url}:55000"
+
+            print(f"Using base URL: {base_url}")  # Debug output
 
             response = self.session.post(
                 f"{base_url}/security/user/authenticate",

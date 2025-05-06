@@ -41,29 +41,42 @@ class ConfigManager:
 
         print("ConfigManager initialization complete")
 
+    # In ConfigManager class
+
     def _load_wazuh_config(self):
         """Load Wazuh configuration with proper error handling"""
         try:
             print(f"Loading Wazuh config from: {self.wazuh_config_path}")
-            if os.path.exists(self.wazuh_config_path):
+            if os.path.exists(self.wazuh_config_path) and os.path.getsize(self.wazuh_config_path) > 0:
                 with open(self.wazuh_config_path, 'r') as f:
-                    config_data = json.load(f)
-                    print(f"Loaded Wazuh config data: {config_data}")
+                    try:
+                        config_data = json.load(f)
+                        print(f"Loaded Wazuh config data: {config_data}")
 
-                    config = WazuhConfig(
-                        url=config_data.get('url', ''),
-                        username=config_data.get('username', ''),
-                        password=config_data.get('password', ''),
-                        suspicious_paths=config_data.get('suspicious_paths', []),
-                        last_modified=datetime.fromisoformat(
-                            config_data.get('last_modified', datetime.now().isoformat())
-                        ),
-                        is_configured=config_data.get('is_configured', False)
-                    )
+                        # Handle missing or invalid date format
+                        last_modified = datetime.now()
+                        if 'last_modified' in config_data:
+                            try:
+                                last_modified = datetime.fromisoformat(config_data['last_modified'])
+                            except (ValueError, TypeError):
+                                pass
 
-                    if config.is_configured:
-                        print("Loaded configured Wazuh config")
-                        return config
+                        config = WazuhConfig(
+                            url=config_data.get('url', ''),
+                            username=config_data.get('username', ''),
+                            password=config_data.get('password', ''),
+                            suspicious_paths=config_data.get('suspicious_paths', []),
+                            last_modified=last_modified,
+                            is_configured=config_data.get('is_configured', False)
+                        )
+
+                        # Additional validity check
+                        if config.url and config.username and config.password:
+                            config.is_configured = True
+                            print("Loaded configured Wazuh config")
+                            return config
+                    except json.JSONDecodeError:
+                        print("Invalid JSON in Wazuh config file")
 
             print("Creating new empty Wazuh configuration")
             return WazuhConfig.create_empty()

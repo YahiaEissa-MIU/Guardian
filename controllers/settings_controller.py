@@ -176,13 +176,18 @@ class SettingsController:
             # Save configuration first
             config_path = os.path.join(self.app_data_dir, 'wazuh_config.json')
             if new_config.save_to_file(config_path):
+                # Update the config manager directly
+                self.config_manager.update_wazuh_config(new_config)
+
                 # Test connection after saving
                 if new_config.validate_connection():
                     self.wazuh_config = new_config
-                    self.notify_observers()
+                    # No need to notify observers - the config manager already did that
                     messagebox.showinfo("Success", "Settings saved and connection verified!")
                     return True
                 else:
+                    # Still update wazuh_config for consistency, even if connection failed
+                    self.wazuh_config = new_config
                     messagebox.showwarning("Warning", "Settings saved but connection test failed.")
                     return True
 
@@ -192,38 +197,6 @@ class SettingsController:
         except Exception as e:
             print(f"Error saving settings: {e}")
             messagebox.showerror("Error", f"Failed to save settings: {e}")
-            return False
-
-    def save_shuffle_settings(self) -> bool:
-        """Saves Shuffle settings after validation"""
-        try:
-            shuffle_url = self.shuffle_url.get().strip()
-            shuffle_api_key = self.shuffle_api_key.get().strip()
-            workflow_name = self.shuffle_workflow.get().strip()
-
-            if not all([shuffle_url, shuffle_api_key, workflow_name]):
-                messagebox.showerror("Error", "All fields must be filled!")
-                return False
-
-            # Update model with new values
-            self.incident_model.shuffle_url = shuffle_url
-            self.incident_model.shuffle_api_key = shuffle_api_key
-            self.incident_model.workflow_name = workflow_name
-            self.incident_model.is_configured = True
-            self.incident_model.last_modified = datetime.now()
-
-            # Save to file
-            config_path = os.path.join(self.app_data_dir, 'shuffle_config.json')
-            if self.incident_model.save_to_file(config_path):
-                messagebox.showinfo("Success", "Shuffle settings saved successfully!")
-                return True
-
-            messagebox.showerror("Error", "Failed to save Shuffle settings!")
-            return False
-
-        except Exception as e:
-            print(f"Error saving Shuffle settings: {e}")
-            messagebox.showerror("Error", f"Failed to save Shuffle settings: {e}")
             return False
 
     def validate_settings(self) -> bool:
@@ -241,32 +214,6 @@ class SettingsController:
             return False
 
         return True
-
-    def add_suspicious_path(self, path: str) -> bool:
-        """Adds a new suspicious path to the configuration"""
-        print(f"Adding suspicious path: {path}")
-        if not path.strip():
-            messagebox.showwarning("Warning", "Please enter a valid path!")
-            return False
-
-        if self.wazuh_config.add_suspicious_path(path.strip()):
-            print("Path added successfully")
-            self.notify_observers()
-            return True
-        return False
-
-    def remove_suspicious_path(self, path: str) -> bool:
-        """Removes a suspicious path from the configuration"""
-        print(f"Removing suspicious path: {path}")
-        if self.wazuh_config.remove_suspicious_path(path):
-            print("Path removed successfully")
-            self.notify_observers()
-            return True
-        return False
-
-    def get_suspicious_paths(self) -> List[str]:
-        """Returns the current list of suspicious paths"""
-        return self.wazuh_config.suspicious_paths
 
     def add_observer(self, callback: Callable):
         """Adds an observer to be notified of configuration changes"""
@@ -290,36 +237,6 @@ class SettingsController:
             except Exception as e:
                 print(f"Error notifying observer {observer}: {e}")
 
-    def toggle_notifications(self):
-        """Toggles the notification system"""
-        self.notification_enabled = self.notify_var.get()
-        print(f"Notifications {'enabled' if self.notification_enabled else 'disabled'}")
-
-        if self.notification_enabled:
-            messagebox.showinfo(
-                "Notifications Enabled",
-                "You will now receive desktop notifications for security alerts."
-            )
-            try:
-                notification.notify(
-                    title='Guardian Security',
-                    message='Notifications enabled successfully.',
-                    app_name='Guardian',
-                    timeout=10,
-                )
-            except Exception as e:
-                print(f"Error sending confirmation notification: {e}")
-        else:
-            messagebox.showinfo(
-                "Notifications Disabled",
-                "Desktop notifications have been disabled."
-            )
-
-    def toggle_auto_backup(self):
-        """Toggles the auto backup setting"""
-        current_state = self.auto_backup_var.get()
-        print(f"Auto backup {'enabled' if current_state else 'disabled'}")
-
     def get_agent_config_path(self):
         """Get the path to the Wazuh agent configuration file"""
         if sys.platform == "win32":
@@ -336,77 +253,66 @@ class SettingsController:
             return False
 
     def update_agent_config(self):
-        """Update the Wazuh agent configuration"""
-        if not self.is_admin():
-            messagebox.showerror(
-                "Error",
-                "Administrator privileges required to modify agent configuration."
-            )
-            return False
+        """Update the Wazuh agent configuration with proper UI feedback"""
+        if not hasattr(self, 'view') or self.view is None:
+            print("No view available")
+            return
 
-        # Check file permissions
-        has_permissions, message = self.check_file_permissions()
-        if not has_permissions:
-            messagebox.showerror(
-                "Error",
-                f"Insufficient permissions: {message}"
-            )
-            return False
+        # Get the manager IP from the view
+        manager_ip = self.view.get_agent_ip()
 
-        if not self.view:
-            messagebox.showerror("Error", "View not properly initialized")
-            return False
+        if not manager_ip:
+            self.view.show_error("Configuration Error", "Please enter a valid manager IP address")
+            return
 
-        new_ip = self.view.get_agent_ip()
-        if not new_ip:
-            messagebox.showerror("Error", "Please enter a valid IP address")
-            return False
+        # Show a warning that this operation requires admin privileges
+        if messagebox.askyesno(
+                "Administrator Privileges Required",
+                "Updating the agent configuration requires administrator privileges. Continue?"
+        ):
+            # Start the update in a separate thread to keep UI responsive
+            import threading
+            thread = threading.Thread(target=self.update_config_thread, args=(manager_ip,))
+            thread.daemon = True
+            thread.start()
 
-        def update_config_thread():
-            try:
-                print(f"Starting configuration update for IP: {new_ip}")
+    def update_config_thread(self, manager_ip):
+        try:
+            print(f"Starting configuration update for IP: {manager_ip}")
 
-                # Create backup
-                print("Creating backup...")
-                self.backup_agent_config()
+            # Create backup
+            print("Creating backup...")
+            self.backup_agent_config()
 
-                # Modify configuration
-                print("Modifying configuration...")
-                self.modify_agent_config(new_ip)
+            # Modify configuration
+            print("Modifying configuration...")
+            self.modify_agent_config(manager_ip)
 
-                # Restart service
-                print("Restarting service...")
-                self.restart_agent_service()
+            # Restart service
+            print("Restarting service...")
+            self.restart_agent_service()
 
-                # Verify the change
-                print("Verifying changes...")
-                with open(self.agent_config_path, 'r') as f:
-                    content = f.read()
-                    if new_ip not in content:
-                        raise Exception("Failed to verify IP address change in configuration")
+            # Verify the change
+            print("Verifying changes...")
+            with open(self.agent_config_path, 'r') as f:
+                content = f.read()
+                if manager_ip not in content:
+                    raise Exception("Failed to verify IP address change in configuration")
 
-                # Show success message
-                if self.view:
-                    self.view.after(0, lambda: messagebox.showinfo(
-                        "Success",
-                        "Agent configuration updated successfully. The agent will restart to apply changes."
-                    ))
-                return True
+            # Show success message
+            if self.view:
+                self.view.after(0, lambda: messagebox.showinfo(
+                    title="Success",
+                    message="Agent configuration updated successfully. The agent will restart to apply changes."
+                ))
 
-            except Exception as e:
-                print(f"Error during configuration update: {str(e)}")
-                if self.view:
-                    self.view.after(0, lambda: messagebox.showerror(
-                        "Error",
-                        f"Failed to update agent configuration: {str(e)}"
-                    ))
-                return False
-
-        # Start update in separate thread
-        thread = threading.Thread(target=update_config_thread)
-        thread.daemon = True
-        thread.start()
-        return True
+        except Exception as e:
+            if self.view:
+                self.view.after(0, lambda: messagebox.showerror(
+                    title="Error",
+                    message=f"Failed to update agent configuration: {str(e)}"
+                ))
+            print(f"Error updating agent config: {str(e)}")
 
     def check_file_permissions(self):
         """Check if we have the necessary permissions to modify the config file"""
@@ -487,49 +393,6 @@ class SettingsController:
         except Exception as e:
             raise Exception(f"Failed to restart agent service: {str(e)}")
 
-    def test_notification(self):
-        """Sends a test notification"""
-        if not self.notify_var.get():
-            messagebox.showwarning(
-                "Notifications Disabled",
-                "Please enable notifications first to test them."
-            )
-            return
-
-        try:
-            notification.notify(
-                title='Guardian Security - Test',
-                message='This is a test notification. Your notification system is working correctly.',
-                app_name='Guardian',
-                timeout=10,
-            )
-            print("Test notification sent successfully")
-            messagebox.showinfo(
-                "Success",
-                "Test notification sent successfully!\nIf you didn't see it, please check your system's notification settings."
-            )
-        except Exception as e:
-            print(f"Failed to send test notification: {e}")
-            messagebox.showerror(
-                "Error",
-                f"Failed to send test notification: {str(e)}\n"
-                "Please check if notifications are enabled in your system settings."
-            )
-
-    def send_notification(self, title: str, message: str):
-        """Sends a desktop notification if enabled"""
-        if self.notification_enabled:
-            try:
-                notification.notify(
-                    title=title,
-                    message=message,
-                    app_name='Guardian',
-                    timeout=10,
-                )
-                print(f"Notification sent: {title}")
-            except Exception as e:
-                print(f"Failed to send notification: {e}")
-
     def test_shuffle_connection(self):
         """Tests the Shuffle connection with current settings"""
         if self.is_testing:
@@ -591,18 +454,24 @@ class SettingsController:
             print(f"Updating Shuffle config with URL: {shuffle_url}")  # Debug print
 
             # Update incident model configuration
-            self.incident_model.shuffle_url = shuffle_url
-            self.incident_model.shuffle_api_key = shuffle_api_key
-            self.incident_model.workflow_name = workflow_name
-            self.incident_model.is_configured = True
-            self.incident_model.last_modified = datetime.now()
+            updated_model = IncidentHistoryModel(
+                shuffle_url=shuffle_url,
+                shuffle_api_key=shuffle_api_key,
+                workflow_name=workflow_name,
+                is_configured=True,
+                last_modified=datetime.now()
+            )
 
             # Save to file with full path
             config_path = os.path.join(self.app_data_dir, 'shuffle_config.json')
             print(f"Saving to path: {config_path}")  # Debug print
 
-            if self.incident_model.save_to_file(config_path):
+            if updated_model.save_to_file(config_path):
                 print("Save successful")  # Debug print
+
+                # Update the config manager directly
+                self.config_manager.update_shuffle_config(updated_model)
+
                 messagebox.showinfo("Success", "Shuffle settings saved successfully!")
                 return True
 
