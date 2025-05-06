@@ -64,6 +64,12 @@ a = Analysis(
         'csv',  # For CSV export
         'subprocess',  # For system commands
         'ctypes',  # For admin checks
+        'tkinter',
+        'tkinter.ttk',
+        'tkinter.messagebox',
+        'reportlab.lib.pagesizes',
+        'reportlab.pdfgen.canvas',
+        'asyncio.windows_events',
     ],
     hookspath=[],
     hooksconfig={},
@@ -80,6 +86,23 @@ a.datas += [
     ('acknowledged_alerts.txt', '', 'DATA'),  # Empty file that will be created if needed
 ]
 
+# Add customtkinter theme files
+try:
+    import os
+    import customtkinter
+    ctk_path = os.path.dirname(customtkinter.__file__)
+
+    # Ensure the themes directory exists
+    themes_path = os.path.join(ctk_path, 'assets', 'themes')
+    if os.path.exists(themes_path):
+        for theme_file in os.listdir(themes_path):
+            source_path = os.path.join(themes_path, theme_file)
+            dest_path = os.path.join('customtkinter', 'assets', 'themes', theme_file)
+            a.datas.append((dest_path, source_path, 'DATA'))
+            print(f"Added theme file: {dest_path}")
+except Exception as e:
+    print(f"Failed to add customtkinter themes: {str(e)}")
+
 pyz = PYZ(
     a.pure,
     a.zipped_data,
@@ -93,7 +116,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='Guardian',
+    name='Guardian_v2.0',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
